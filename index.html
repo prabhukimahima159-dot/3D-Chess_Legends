@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>3D Chess Legends</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -14,11 +14,19 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        * {
+            box-sizing: border-box;
+            touch-action: manipulation;
+        }
         body {
             font-family: 'Inter', sans-serif;
             user-select: none;
             overflow: hidden;
             background-color: #0b0f19;
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
         }
 
         .font-cinzel {
@@ -48,7 +56,7 @@
 
         /* Custom Glassmorphism */
         .glass-panel {
-            background: rgba(15, 23, 42, 0.78);
+            background: rgba(15, 23, 42, 0.85);
             backdrop-filter: blur(14px);
             -webkit-backdrop-filter: blur(14px);
             border: 1px solid rgba(255, 255, 255, 0.12);
@@ -81,11 +89,11 @@
     <!-- Loading Screen Overlay -->
     <div id="loading-screen" class="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center p-6 transition-opacity duration-700">
         <div class="text-center max-w-md w-full">
-            <div class="w-24 h-24 mx-auto mb-6 bg-amber-500/10 border-2 border-amber-500/40 rounded-2xl flex items-center justify-center glow-effect">
-                <i class="fa-solid fa-chess-king text-5xl text-amber-500"></i>
+            <div class="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-6 bg-amber-500/10 border-2 border-amber-500/40 rounded-2xl flex items-center justify-center glow-effect">
+                <i class="fa-solid fa-chess-king text-4xl sm:text-5xl text-amber-500"></i>
             </div>
-            <h1 class="text-3xl font-extrabold tracking-wider text-amber-400 font-cinzel mb-2">3D CHESS LEGENDS</h1>
-            <p class="text-slate-400 text-sm mb-8">Rendering Grandmaster Environment...</p>
+            <h1 class="text-2xl sm:text-3xl font-extrabold tracking-wider text-amber-400 font-cinzel mb-2">3D CHESS LEGENDS</h1>
+            <p class="text-slate-400 text-xs sm:text-sm mb-6">Rendering Mobile Grandmaster Board...</p>
             
             <!-- Progress Bar -->
             <div class="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden mb-3 border border-slate-700">
@@ -99,154 +107,158 @@
     <div id="canvas-container"></div>
 
     <!-- UI Overlay Layer -->
-    <div class="ui-layer h-screen flex flex-col justify-between p-3 sm:p-5">
+    <div class="ui-layer h-screen flex flex-col justify-between p-2 sm:p-5">
         
         <!-- Header Controls -->
-        <header class="flex justify-between items-center w-full max-w-7xl mx-auto interactive">
-            <div class="flex items-center space-x-3 glass-panel px-4 py-2.5 rounded-2xl shadow-xl">
-                <button id="btn-menu-open" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 transition cursor-pointer" title="Main Menu">
-                    <i class="fa-solid fa-bars text-lg"></i>
-                </button>
-                <button id="btn-stats-open" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 transition cursor-pointer" title="Player Stats & Index">
-                    <i class="fa-solid fa-chart-pie text-lg"></i>
-                </button>
-                <div class="flex items-center space-x-2">
-                    <i class="fa-solid fa-crown text-amber-400 text-xl"></i>
-                    <span class="font-bold font-cinzel text-lg tracking-wide hidden sm:inline">CHESS 3D</span>
+        <header class="flex flex-col gap-2 w-full max-w-7xl mx-auto interactive">
+            <div class="flex justify-between items-center w-full">
+                <!-- Left Control Buttons -->
+                <div class="flex items-center space-x-1.5 sm:space-x-3 glass-panel px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-2xl shadow-xl">
+                    <button id="btn-menu-open" class="p-1.5 sm:p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 transition cursor-pointer" title="Main Menu">
+                        <i class="fa-solid fa-bars text-sm sm:text-lg"></i>
+                    </button>
+                    <button id="btn-stats-open" class="p-1.5 sm:p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 transition cursor-pointer" title="Player Stats">
+                        <i class="fa-solid fa-chart-pie text-sm sm:text-lg"></i>
+                    </button>
+                    <div class="flex items-center space-x-1.5">
+                        <i class="fa-solid fa-crown text-amber-400 text-base sm:text-xl"></i>
+                        <span class="font-bold font-cinzel text-xs sm:text-lg tracking-wide">3D CHESS</span>
+                    </div>
+                </div>
+
+                <!-- Currency Display -->
+                <div class="glass-panel px-3 py-1.5 sm:px-4 sm:py-2 rounded-2xl flex items-center space-x-1.5 border border-amber-500/30">
+                    <i class="fa-solid fa-coins text-amber-400 text-sm sm:text-lg"></i>
+                    <span id="coin-balance" class="font-bold text-amber-300 font-mono text-xs sm:text-lg">50</span>
                 </div>
             </div>
 
-            <!-- Currency & Status Display -->
-            <div class="flex items-center space-x-3">
-                <div class="glass-panel px-4 py-2 rounded-2xl flex items-center space-x-2 border border-amber-500/30">
-                    <i class="fa-solid fa-coins text-amber-400 text-lg"></i>
-                    <span id="coin-balance" class="font-bold text-amber-300 font-mono text-lg">50</span>
-                </div>
-                <!-- Session Playtime Reward Indicator -->
-                <div class="glass-panel px-3 py-2 rounded-2xl flex items-center space-x-2 border border-slate-700/60" title="Active Playtime Session Reward">
-                    <i class="fa-solid fa-gift text-amber-400 text-sm animate-bounce"></i>
+            <!-- Action Toolbar (Scrollable on small phones) -->
+            <div class="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 w-full justify-start sm:justify-end">
+                <div class="glass-panel px-2.5 py-1.5 rounded-xl flex items-center space-x-1.5 border border-slate-700/60 shrink-0" title="Playtime Reward">
+                    <i class="fa-solid fa-gift text-amber-400 text-xs animate-bounce"></i>
                     <div class="flex flex-col text-left">
-                        <span id="next-reward-label" class="text-[9px] text-amber-400 font-bold uppercase tracking-wider">+5 Coins in</span>
-                        <span id="playtime-timer" class="font-mono text-xs text-slate-200 font-semibold">03:00</span>
+                        <span id="next-reward-label" class="text-[8px] text-amber-400 font-bold uppercase tracking-wider">+5 in</span>
+                        <span id="playtime-timer" class="font-mono text-[10px] text-slate-200 font-semibold">03:00</span>
                     </div>
                 </div>
-                <button id="btn-hint-trigger" class="interactive glass-panel px-3.5 py-2 rounded-2xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 font-semibold text-xs transition flex items-center space-x-2 cursor-pointer">
-                    <i class="fa-solid fa-lightbulb text-amber-400"></i>
-                    <span id="hint-btn-text">Hint (1 Left)</span>
+                <button id="btn-hint-trigger" class="interactive glass-panel px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 font-semibold text-[11px] transition flex items-center space-x-1 shrink-0 cursor-pointer">
+                    <i class="fa-solid fa-lightbulb text-amber-400 text-xs"></i>
+                    <span id="hint-btn-text">Hint (1)</span>
                 </button>
-                <button id="btn-settings-open" class="interactive glass-panel p-2.5 rounded-2xl text-slate-300 hover:text-white transition cursor-pointer" title="Settings">
-                    <i class="fa-solid fa-gear text-lg"></i>
+                <button id="btn-settings-open" class="interactive glass-panel p-1.5 rounded-xl text-slate-300 hover:text-white transition shrink-0 cursor-pointer" title="Settings">
+                    <i class="fa-solid fa-gear text-sm"></i>
                 </button>
-                <button id="btn-save-game" class="interactive glass-panel px-3.5 py-2 rounded-2xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 font-semibold text-xs transition flex items-center space-x-1.5 cursor-pointer" title="Save Current Game Progress">
-                    <i class="fa-solid fa-floppy-disk"></i>
-                    <span id="save-btn-text">Save Game</span>
+                <button id="btn-save-game" class="interactive glass-panel px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 font-semibold text-[11px] transition flex items-center space-x-1 shrink-0 cursor-pointer">
+                    <i class="fa-solid fa-floppy-disk text-xs"></i>
+                    <span id="save-btn-text">Save</span>
                 </button>
-                <button id="btn-load-game" class="interactive glass-panel px-3.5 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold text-xs transition flex items-center space-x-1.5 cursor-pointer" title="Load Saved Game">
-                    <i class="fa-solid fa-folder-open"></i>
-                    <span id="load-btn-text">Load Game</span>
+                <button id="btn-load-game" class="interactive glass-panel px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold text-[11px] transition flex items-center space-x-1 shrink-0 cursor-pointer">
+                    <i class="fa-solid fa-folder-open text-xs"></i>
+                    <span id="load-btn-text">Load</span>
                 </button>
-                <button id="btn-shop-open" class="interactive glass-panel px-4 py-2 rounded-2xl hover:bg-amber-600/20 text-amber-400 font-semibold text-sm transition flex items-center space-x-2 border border-amber-500/30 cursor-pointer">
-                    <i class="fa-solid fa-store"></i>
-                    <span class="hidden sm:inline">Theme Shop</span>
+                <button id="btn-shop-open" class="interactive glass-panel px-2.5 py-1.5 rounded-xl hover:bg-amber-600/20 text-amber-400 font-semibold text-[11px] transition flex items-center space-x-1 border border-amber-500/30 shrink-0 cursor-pointer">
+                    <i class="fa-solid fa-store text-xs"></i>
+                    <span>Shop</span>
                 </button>
             </div>
         </header>
 
         <!-- Footer / Turn HUD -->
-        <footer class="w-full max-w-xl mx-auto glass-panel p-3.5 rounded-2xl flex items-center justify-between interactive shadow-xl border border-amber-500/20">
+        <footer class="w-full max-w-md mx-auto glass-panel p-2.5 sm:p-3.5 rounded-2xl flex items-center justify-between interactive shadow-xl border border-amber-500/20 mb-1">
             <div class="flex items-center space-x-2">
-                <div id="turn-indicator-dot" class="w-3.5 h-3.5 rounded-full bg-amber-400 animate-pulse"></div>
-                <span id="turn-indicator-text" class="font-bold text-sm text-slate-200">White's Turn</span>
+                <div id="turn-indicator-dot" class="w-3 h-3 rounded-full bg-amber-400 animate-pulse"></div>
+                <span id="turn-indicator-text" class="font-bold text-xs sm:text-sm text-slate-200">White's Turn</span>
             </div>
-            <button id="btn-resign" class="px-4 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 rounded-xl font-bold text-xs transition cursor-pointer">
-                Resign Match (0 Coins)
+            <button id="btn-resign" class="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 rounded-xl font-bold text-[11px] transition cursor-pointer">
+                Resign
             </button>
         </footer>
     </div>
 
     <!-- HINT SHOP MODAL -->
     <div id="hint-shop-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 interactive">
-        <div class="glass-panel p-6 rounded-3xl max-w-sm w-full border border-amber-500/40 shadow-2xl text-center">
+        <div class="glass-panel p-5 sm:p-6 rounded-3xl max-w-xs sm:max-w-sm w-full border border-amber-500/40 shadow-2xl text-center">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold font-cinzel text-amber-400 flex items-center gap-2">
+                <h3 class="text-lg sm:text-xl font-bold font-cinzel text-amber-400 flex items-center gap-2">
                     <i class="fa-solid fa-lightbulb"></i> Get More Hints
                 </h3>
-                <button id="btn-hint-shop-close" class="p-2 rounded-xl text-slate-400 hover:text-white cursor-pointer">
+                <button id="btn-hint-shop-close" class="p-1 rounded-xl text-slate-400 hover:text-white cursor-pointer">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
-            <p class="text-slate-300 text-xs mb-5">You are out of hints! Purchase additional hints using your earned coins.</p>
+            <p class="text-slate-300 text-xs mb-5">Buy additional hints using your earned coins.</p>
             
-            <div class="space-y-3 mb-6">
-                <button id="btn-buy-hint-1" class="w-full p-3.5 rounded-2xl bg-slate-900/80 hover:bg-slate-800 border border-amber-500/40 flex items-center justify-between text-left transition cursor-pointer">
+            <div class="space-y-3 mb-5">
+                <button id="btn-buy-hint-1" class="w-full p-3 rounded-2xl bg-slate-900/80 hover:bg-slate-800 border border-amber-500/40 flex items-center justify-between text-left transition cursor-pointer">
                     <div class="flex items-center space-x-3">
-                        <div class="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400 font-bold">
+                        <div class="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400 font-bold text-xs">
                             1x
                         </div>
                         <div>
-                            <p class="font-bold text-sm text-slate-100">1 Hint</p>
+                            <p class="font-bold text-xs sm:text-sm text-slate-100">1 Hint</p>
                             <p class="text-[10px] text-slate-400">100 Coins</p>
                         </div>
                     </div>
-                    <span class="font-bold text-amber-400 text-sm flex items-center gap-1 font-mono">
+                    <span class="font-bold text-amber-400 text-xs sm:text-sm flex items-center gap-1 font-mono">
                         100 <i class="fa-solid fa-coins"></i>
                     </span>
                 </button>
 
-                <button id="btn-buy-hint-5" class="w-full p-3.5 rounded-2xl bg-gradient-to-r from-amber-600/30 to-amber-500/10 hover:from-amber-600/40 hover:to-amber-500/20 border-2 border-amber-500/70 flex items-center justify-between text-left transition cursor-pointer">
+                <button id="btn-buy-hint-5" class="w-full p-3 rounded-2xl bg-gradient-to-r from-amber-600/30 to-amber-500/10 border-2 border-amber-500/70 flex items-center justify-between text-left transition cursor-pointer">
                     <div class="flex items-center space-x-3">
-                        <div class="w-9 h-9 rounded-xl bg-amber-500 text-slate-950 font-extrabold flex items-center justify-center shadow-md">
+                        <div class="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 font-extrabold flex items-center justify-center text-xs shadow-md">
                             5x
                         </div>
                         <div>
-                            <p class="font-bold text-sm text-amber-300 flex items-center gap-1">
-                                5 Hints <span class="text-[9px] bg-amber-500/30 text-amber-300 px-1.5 py-0.5 rounded font-semibold uppercase">Value Pack</span>
+                            <p class="font-bold text-xs sm:text-sm text-amber-300 flex items-center gap-1">
+                                5 Hints
                             </p>
                             <p class="text-[10px] text-slate-400">500 Coins</p>
                         </div>
                     </div>
-                    <span class="font-bold text-amber-400 text-sm flex items-center gap-1 font-mono">
+                    <span class="font-bold text-amber-400 text-xs sm:text-sm flex items-center gap-1 font-mono">
                         500 <i class="fa-solid fa-coins"></i>
                     </span>
                 </button>
             </div>
-            <button id="btn-hint-shop-cancel" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs cursor-pointer">Back to Game</button>
+            <button id="btn-hint-shop-cancel" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs cursor-pointer">Back to Game</button>
         </div>
     </div>
 
     <!-- SETTINGS MODAL -->
     <div id="settings-modal" class="hidden fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 interactive">
-        <div class="glass-panel p-6 rounded-3xl max-w-md w-full border border-amber-500/30 shadow-2xl">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-2xl font-bold font-cinzel text-amber-400 flex items-center gap-2">
-                    <i class="fa-solid fa-sliders"></i> Game Settings
+        <div class="glass-panel p-5 sm:p-6 rounded-3xl max-w-xs sm:max-w-md w-full border border-amber-500/30 shadow-2xl">
+            <div class="flex justify-between items-center mb-5">
+                <h3 class="text-xl sm:text-2xl font-bold font-cinzel text-amber-400 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders"></i> Settings
                 </h3>
-                <button id="btn-settings-close" class="p-2 rounded-xl text-slate-400 hover:text-white cursor-pointer">
+                <button id="btn-settings-close" class="p-1 rounded-xl text-slate-400 hover:text-white cursor-pointer">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
 
             <!-- Graphics Quality Option -->
-            <div class="mb-6">
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Graphics Quality</label>
-                <div class="grid grid-cols-3 gap-2">
-                    <button data-gfx="normal" class="gfx-btn py-2.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold text-xs cursor-pointer">Normal</button>
-                    <button data-gfx="high" class="gfx-btn py-2.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold text-xs cursor-pointer">High</button>
-                    <button data-gfx="ultra" class="gfx-btn py-2.5 rounded-xl border-2 border-amber-500 bg-amber-500/20 text-white font-bold text-xs cursor-pointer">Ultra 3D</button>
+            <div class="mb-5">
+                <label class="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Graphics Quality</label>
+                <div class="grid grid-cols-3 gap-1.5">
+                    <button data-gfx="normal" class="gfx-btn py-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold text-[11px] cursor-pointer">Normal</button>
+                    <button data-gfx="high" class="gfx-btn py-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold text-[11px] cursor-pointer">High</button>
+                    <button data-gfx="ultra" class="gfx-btn py-2 rounded-xl border-2 border-amber-500 bg-amber-500/20 text-white font-bold text-[11px] cursor-pointer">Ultra 3D</button>
                 </div>
             </div>
 
             <!-- Audio Sliders -->
-            <div class="space-y-4 mb-6">
+            <div class="space-y-3 mb-5">
                 <div>
-                    <div class="flex justify-between text-xs font-bold text-slate-400 uppercase mb-1">
+                    <div class="flex justify-between text-[11px] font-bold text-slate-400 uppercase mb-1">
                         <span>Master Volume</span>
                         <span id="volume-val-master">80%</span>
                     </div>
                     <input type="range" id="slider-volume-master" min="0" max="100" value="80" class="w-full accent-amber-500 bg-slate-800 rounded-lg cursor-pointer">
                 </div>
                 <div>
-                    <div class="flex justify-between text-xs font-bold text-slate-400 uppercase mb-1">
+                    <div class="flex justify-between text-[11px] font-bold text-slate-400 uppercase mb-1">
                         <span>SFX Volume</span>
                         <span id="volume-val-sfx">100%</span>
                     </div>
@@ -254,52 +266,51 @@
                 </div>
             </div>
 
-            <!-- Manual Save Action inside Settings -->
-            <div class="mb-6 pt-2 border-t border-slate-800">
-                <button id="btn-settings-manual-save" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 border border-amber-500/40 text-amber-300 font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer transition">
+            <div class="mb-5 pt-2 border-t border-slate-800">
+                <button id="btn-settings-manual-save" class="w-full py-2 bg-slate-800 hover:bg-slate-700 border border-amber-500/40 text-amber-300 font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer transition">
                     <i class="fa-solid fa-floppy-disk"></i>
-                    <span>Save Current Game Progress Now</span>
+                    <span>Save Game Progress</span>
                 </button>
             </div>
 
-            <button id="btn-settings-save" class="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-bold text-sm rounded-xl transition cursor-pointer">
-                Save & Apply Settings
+            <button id="btn-settings-save" class="w-full py-2.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-bold text-xs sm:text-sm rounded-xl transition cursor-pointer">
+                Save Settings
             </button>
         </div>
     </div>
 
     <!-- MAIN MENU MODAL -->
     <div id="menu-modal" class="fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 interactive">
-        <div class="glass-panel p-6 sm:p-8 rounded-3xl max-w-xl w-full border border-amber-500/30 shadow-2xl text-center">
-            <h2 class="text-3xl font-extrabold font-cinzel text-amber-400 mb-1">CHESS LEGENDS 3D</h2>
-            <p class="text-slate-400 text-sm mb-6">Select Play Mode & AI Difficulty Level</p>
+        <div class="glass-panel p-5 sm:p-8 rounded-3xl max-w-xs sm:max-w-xl w-full border border-amber-500/30 shadow-2xl text-center">
+            <h2 class="text-2xl sm:text-3xl font-extrabold font-cinzel text-amber-400 mb-1">CHESS LEGENDS 3D</h2>
+            <p class="text-slate-400 text-xs sm:text-sm mb-5">Select Mode & AI Difficulty</p>
 
             <!-- Resume Saved Game Banner -->
-            <div id="resume-game-banner" class="hidden mb-6 p-4 bg-gradient-to-r from-amber-500/20 to-amber-600/10 border-2 border-amber-500/60 rounded-2xl flex items-center justify-between text-left shadow-lg">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold text-lg">
+            <div id="resume-game-banner" class="hidden mb-5 p-3 bg-gradient-to-r from-amber-500/20 to-amber-600/10 border-2 border-amber-500/60 rounded-2xl flex items-center justify-between text-left shadow-lg">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold text-sm">
                         <i class="fa-solid fa-clock-rotate-left"></i>
                     </div>
                     <div>
-                        <h4 class="font-bold text-amber-300 text-sm">Saved Match Found!</h4>
-                        <p class="text-slate-400 text-xs">Resume your previous game right where you left off.</p>
+                        <h4 class="font-bold text-amber-300 text-xs sm:text-sm">Saved Match Found!</h4>
+                        <p class="text-slate-400 text-[10px]">Resume previous game.</p>
                     </div>
                 </div>
-                <button id="btn-resume-saved" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition cursor-pointer shadow-md">
-                    Resume Game
+                <button id="btn-resume-saved" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition cursor-pointer shadow-md">
+                    Resume
                 </button>
             </div>
 
             <!-- Mode Selector -->
-            <div class="space-y-4 mb-6">
+            <div class="space-y-4 mb-5">
                 <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Select Game Mode</label>
-                    <div class="grid grid-cols-2 gap-3">
-                        <button id="mode-pve" class="py-3 px-4 rounded-xl border-2 border-amber-500 bg-amber-500/20 text-white font-bold text-sm transition flex items-center justify-center space-x-2 cursor-pointer">
+                    <label class="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Game Mode</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="mode-pve" class="py-2.5 px-3 rounded-xl border-2 border-amber-500 bg-amber-500/20 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-2 cursor-pointer">
                             <i class="fa-solid fa-robot text-amber-400"></i>
                             <span>vs AI</span>
                         </button>
-                        <button id="mode-pvp" class="py-3 px-4 rounded-xl border-2 border-slate-700 bg-slate-800/60 text-slate-400 font-bold text-sm transition flex items-center justify-center space-x-2 cursor-pointer">
+                        <button id="mode-pvp" class="py-2.5 px-3 rounded-xl border-2 border-slate-700 bg-slate-800/60 text-slate-400 font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-2 cursor-pointer">
                             <i class="fa-solid fa-users text-amber-400"></i>
                             <span>Pass & Play</span>
                         </button>
@@ -308,125 +319,121 @@
 
                 <!-- AI Level Selection -->
                 <div id="ai-level-container">
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">AI Difficulty Level</label>
-                    <div class="grid grid-cols-3 gap-2">
-                        <button data-level="1" class="lvl-btn py-2.5 rounded-xl border-2 border-amber-500 bg-amber-500/20 text-white font-bold text-xs cursor-pointer">Lvl 1 (Novice)</button>
-                        <button data-level="2" class="lvl-btn py-2.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold text-xs cursor-pointer">Lvl 2 (Club)</button>
-                        <button data-level="3" class="lvl-btn py-2.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold text-xs cursor-pointer">Lvl 3 (Master)</button>
+                    <label class="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">AI Difficulty</label>
+                    <div class="grid grid-cols-3 gap-1.5">
+                        <button data-level="1" class="lvl-btn py-2 rounded-xl border-2 border-amber-500 bg-amber-500/20 text-white font-bold text-[11px] cursor-pointer">Lvl 1</button>
+                        <button data-level="2" class="lvl-btn py-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold text-[11px] cursor-pointer">Lvl 2</button>
+                        <button data-level="3" class="lvl-btn py-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold text-[11px] cursor-pointer">Lvl 3</button>
                     </div>
                 </div>
             </div>
 
-            <button id="btn-start-game" class="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-extrabold text-sm rounded-xl shadow-lg transition cursor-pointer">
-                Start New Match
+            <button id="btn-start-game" class="w-full py-2.5 sm:py-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-extrabold text-xs sm:text-sm rounded-xl shadow-lg transition cursor-pointer">
+                Start Match
             </button>
         </div>
     </div>
 
     <!-- PLAYER STATS MODAL -->
     <div id="stats-modal" class="hidden fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 interactive">
-        <div class="glass-panel p-6 rounded-3xl max-w-sm w-full border border-amber-500/30 shadow-2xl">
+        <div class="glass-panel p-5 rounded-3xl max-w-xs sm:max-w-sm w-full border border-amber-500/30 shadow-2xl">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold font-cinzel text-amber-400 flex items-center gap-2">
-                    <i class="fa-solid fa-chart-pie"></i> Player Index
+                <h3 class="text-lg font-bold font-cinzel text-amber-400 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie"></i> Player Stats
                 </h3>
-                <button id="btn-stats-close" class="p-2 rounded-xl text-slate-400 hover:text-white cursor-pointer">
+                <button id="btn-stats-close" class="p-1 rounded-xl text-slate-400 hover:text-white cursor-pointer">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
-            <div class="grid grid-cols-2 gap-3 mb-5">
-                <div class="p-3 bg-slate-900/60 rounded-2xl border border-slate-800">
-                    <p class="text-[10px] text-slate-400 uppercase font-bold">Matches Played</p>
-                    <p id="stat-played" class="text-xl font-extrabold text-amber-400 font-mono">0</p>
+            <div class="grid grid-cols-2 gap-2.5 mb-4">
+                <div class="p-2.5 bg-slate-900/60 rounded-2xl border border-slate-800">
+                    <p class="text-[9px] text-slate-400 uppercase font-bold">Matches</p>
+                    <p id="stat-played" class="text-lg font-extrabold text-amber-400 font-mono">0</p>
                 </div>
-                <div class="p-3 bg-slate-900/60 rounded-2xl border border-slate-800">
-                    <p class="text-[10px] text-slate-400 uppercase font-bold">Victories</p>
-                    <p id="stat-wins" class="text-xl font-extrabold text-green-400 font-mono">0</p>
+                <div class="p-2.5 bg-slate-900/60 rounded-2xl border border-slate-800">
+                    <p class="text-[9px] text-slate-400 uppercase font-bold">Victories</p>
+                    <p id="stat-wins" class="text-lg font-extrabold text-green-400 font-mono">0</p>
                 </div>
-                <div class="p-3 bg-slate-900/60 rounded-2xl border border-slate-800">
-                    <p class="text-[10px] text-slate-400 uppercase font-bold">Win Rate</p>
-                    <p id="stat-winrate" class="text-xl font-extrabold text-cyan-400 font-mono">0%</p>
+                <div class="p-2.5 bg-slate-900/60 rounded-2xl border border-slate-800">
+                    <p class="text-[9px] text-slate-400 uppercase font-bold">Win Rate</p>
+                    <p id="stat-winrate" class="text-lg font-extrabold text-cyan-400 font-mono">0%</p>
                 </div>
-                <div class="p-3 bg-slate-900/60 rounded-2xl border border-slate-800">
-                    <p class="text-[10px] text-slate-400 uppercase font-bold">Coins Earned</p>
-                    <p id="stat-coins-earned" class="text-xl font-extrabold text-yellow-400 font-mono">0</p>
+                <div class="p-2.5 bg-slate-900/60 rounded-2xl border border-slate-800">
+                    <p class="text-[9px] text-slate-400 uppercase font-bold">Coins Earned</p>
+                    <p id="stat-coins-earned" class="text-lg font-extrabold text-yellow-400 font-mono">0</p>
                 </div>
             </div>
-            <button id="btn-stats-ok" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold rounded-xl text-sm border border-amber-500/30 cursor-pointer">Close</button>
+            <button id="btn-stats-ok" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold rounded-xl text-xs border border-amber-500/30 cursor-pointer">Close</button>
         </div>
     </div>
 
     <!-- GAME REVIEW & RATING MODAL -->
     <div id="game-review-modal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 interactive">
-        <div class="glass-panel p-6 rounded-3xl max-w-lg w-full border border-amber-500/40 shadow-2xl">
-            <div class="text-center mb-5">
-                <div class="w-14 h-14 mx-auto mb-2 bg-amber-500/20 border border-amber-500/50 rounded-2xl flex items-center justify-center">
-                    <i class="fa-solid fa-trophy text-2xl text-amber-400"></i>
+        <div class="glass-panel p-5 rounded-3xl max-w-xs sm:max-w-lg w-full border border-amber-500/40 shadow-2xl">
+            <div class="text-center mb-4">
+                <div class="w-12 h-12 mx-auto mb-2 bg-amber-500/20 border border-amber-500/50 rounded-2xl flex items-center justify-center">
+                    <i class="fa-solid fa-trophy text-xl text-amber-400"></i>
                 </div>
-                <h3 class="text-2xl font-bold font-cinzel text-amber-400">Match Review</h3>
-                <p id="review-rating-title" class="text-sm font-semibold text-slate-300 mt-1">Grandmaster Rating: 82%</p>
-                <p id="review-rating-desc" class="text-xs text-slate-400 mt-1">Solid tactical opening and control.</p>
+                <h3 class="text-xl font-bold font-cinzel text-amber-400">Match Review</h3>
+                <p id="review-rating-title" class="text-xs font-semibold text-slate-300 mt-1">Grandmaster Rating: 82%</p>
+                <p id="review-rating-desc" class="text-[11px] text-slate-400 mt-0.5">Solid tactical control.</p>
             </div>
 
             <!-- Move History Review List -->
-            <div class="mb-5">
-                <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Move History</h4>
-                <div id="review-moves-list" class="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 max-h-40 overflow-y-auto custom-scrollbar space-y-1">
-                    <!-- Moves inserted dynamically -->
+            <div class="mb-4">
+                <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Move History</h4>
+                <div id="review-moves-list" class="bg-slate-900/80 border border-slate-800 rounded-2xl p-2.5 max-h-32 overflow-y-auto custom-scrollbar space-y-1">
                 </div>
             </div>
 
-            <div class="flex gap-3">
-                <button id="btn-review-close" class="w-1/2 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl transition cursor-pointer">Close</button>
-                <button id="btn-review-next" class="w-1/2 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl transition cursor-pointer shadow-md">Main Menu</button>
+            <div class="flex gap-2">
+                <button id="btn-review-close" class="w-1/2 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl transition cursor-pointer">Close</button>
+                <button id="btn-review-next" class="w-1/2 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl transition cursor-pointer shadow-md">Main Menu</button>
             </div>
         </div>
     </div>
 
     <!-- THEME SHOP MODAL -->
     <div id="shop-modal" class="hidden fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 interactive">
-        <div class="glass-panel p-6 rounded-3xl max-w-xl w-full border border-amber-500/30 shadow-2xl">
+        <div class="glass-panel p-5 rounded-3xl max-w-xs sm:max-w-xl w-full border border-amber-500/30 shadow-2xl">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold font-cinzel text-amber-400 flex items-center gap-2">
+                <h3 class="text-lg font-bold font-cinzel text-amber-400 flex items-center gap-2">
                     <i class="fa-solid fa-store"></i> Theme Shop
                 </h3>
-                <button id="btn-shop-close" class="p-2 rounded-xl text-slate-400 hover:text-white cursor-pointer">
+                <button id="btn-shop-close" class="p-1 rounded-xl text-slate-400 hover:text-white cursor-pointer">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
 
-            <div class="space-y-4">
+            <div class="space-y-3">
                 <div>
-                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Board & Piece Skins</h4>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div class="p-3 rounded-2xl bg-slate-800/60 border border-amber-500/50 flex flex-col justify-between">
+                    <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Skins</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        <div class="p-2.5 rounded-2xl bg-slate-800/60 border border-amber-500/50 flex flex-col justify-between">
                             <div>
-                                <div class="h-16 rounded-xl bg-gradient-to-r from-amber-200 to-amber-800 mb-2 border border-slate-600"></div>
-                                <h5 class="font-bold text-sm text-slate-100">Classic Wood</h5>
-                                <p class="text-[10px] text-slate-400 mb-3">Traditional look</p>
+                                <div class="h-12 rounded-xl bg-gradient-to-r from-amber-200 to-amber-800 mb-2 border border-slate-600"></div>
+                                <h5 class="font-bold text-xs text-slate-100">Classic Wood</h5>
                             </div>
-                            <button data-theme="classic" class="theme-select-btn w-full py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs cursor-pointer">Equipped</button>
+                            <button data-theme="classic" class="theme-select-btn w-full mt-2 py-1 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs cursor-pointer">Equipped</button>
                         </div>
-                        <div class="p-3 rounded-2xl bg-slate-800/60 border border-slate-700 flex flex-col justify-between">
+                        <div class="p-2.5 rounded-2xl bg-slate-800/60 border border-slate-700 flex flex-col justify-between">
                             <div>
-                                <div class="h-16 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-900 mb-2 border border-slate-600"></div>
-                                <h5 class="font-bold text-sm text-slate-100">Cyber Neon</h5>
-                                <p class="text-[10px] text-slate-400 mb-3">Futuristic glow</p>
+                                <div class="h-12 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-900 mb-2 border border-slate-600"></div>
+                                <h5 class="font-bold text-xs text-slate-100">Cyber Neon</h5>
                             </div>
-                            <button data-theme="neon" data-cost="500" class="theme-select-btn w-full py-1.5 rounded-xl bg-slate-700 hover:bg-amber-600 text-amber-300 font-bold text-xs flex items-center justify-center space-x-1 cursor-pointer">
-                                <i class="fa-solid fa-coins text-amber-400"></i>
-                                <span>500 Coins</span>
+                            <button data-theme="neon" data-cost="500" class="theme-select-btn w-full mt-2 py-1 rounded-xl bg-slate-700 hover:bg-amber-600 text-amber-300 font-bold text-xs flex items-center justify-center space-x-1 cursor-pointer">
+                                <i class="fa-solid fa-coins text-amber-400 text-xs"></i>
+                                <span>500</span>
                             </button>
                         </div>
-                        <div class="p-3 rounded-2xl bg-slate-800/60 border border-slate-700 flex flex-col justify-between">
+                        <div class="p-2.5 rounded-2xl bg-slate-800/60 border border-slate-700 flex flex-col justify-between">
                             <div>
-                                <div class="h-16 rounded-xl bg-gradient-to-r from-slate-200 to-slate-900 mb-2 border border-slate-600"></div>
-                                <h5 class="font-bold text-sm text-slate-100">Monochrome Marble</h5>
-                                <p class="text-[10px] text-slate-400 mb-3">Polished marble</p>
+                                <div class="h-12 rounded-xl bg-gradient-to-r from-slate-200 to-slate-900 mb-2 border border-slate-600"></div>
+                                <h5 class="font-bold text-xs text-slate-100">Marble</h5>
                             </div>
-                            <button data-theme="marble" data-cost="1000" class="theme-select-btn w-full py-1.5 rounded-xl bg-slate-700 hover:bg-amber-600 text-amber-300 font-bold text-xs flex items-center justify-center space-x-1 cursor-pointer">
-                                <i class="fa-solid fa-coins text-amber-400"></i>
-                                <span>1000 Coins</span>
+                            <button data-theme="marble" data-cost="1000" class="theme-select-btn w-full mt-2 py-1 rounded-xl bg-slate-700 hover:bg-amber-600 text-amber-300 font-bold text-xs flex items-center justify-center space-x-1 cursor-pointer">
+                                <i class="fa-solid fa-coins text-amber-400 text-xs"></i>
+                                <span>1000</span>
                             </button>
                         </div>
                     </div>
@@ -537,7 +544,7 @@
         };
 
         let sessionPlaytimeSeconds = 0;
-        let rewardCountdown = 180; // 3-minute cycle countdown in seconds
+        let rewardCountdown = 180;
 
         let scene, camera, renderer, controls;
         let boardSquareGroup, pieceGroup, highlightGroup, handMeshGroup;
@@ -558,7 +565,7 @@
             capturedPieces: { w: [], b: [] },
             isGameOver: false,
             hintsRemaining: 1,
-            hasMoved: {} // Track piece first move for 2-step pawn rule
+            hasMoved: {}
         };
 
         const initialBoardSetup = [
@@ -597,7 +604,7 @@
             const interval = setInterval(() => {
                 progress += 25;
                 if (loadingBar) loadingBar.style.width = progress + '%';
-                if (loadingText) loadingText.innerText = `Initializing 3D Geometry... ${progress}%`;
+                if (loadingText) loadingText.innerText = `Initializing 3D Board... ${progress}%`;
                 if (progress >= 100) {
                     clearInterval(interval);
                     if (loadingScreen) {
@@ -606,10 +613,13 @@
                     }
                     init3D();
                     sound.startPeacefulMusic();
-                    checkAndShowResumeOption();
-                    loadSavedGameFromStorage();
+                    const hasSaved = checkAndShowResumeOption();
+                    if (!hasSaved) {
+                        resetInitialBoard();
+                        buildPieces3D();
+                    }
                 }
-            }, 120);
+            }, 100);
 
             setupUIEvents();
             startPlaytimeTimer();
@@ -619,15 +629,18 @@
             try {
                 const saved = localStorage.getItem('chess_saved_game');
                 const banner = document.getElementById('resume-game-banner');
-                if (saved && banner) {
+                if (saved) {
                     const parsed = JSON.parse(saved);
                     if (parsed && parsed.board && !parsed.isGameOver) {
-                        banner.classList.remove('hidden');
-                        return;
+                        if (banner) banner.classList.remove('hidden');
+                        return true;
                     }
                 }
                 if (banner) banner.classList.add('hidden');
-            } catch (e) {}
+                return false;
+            } catch (e) {
+                return false;
+            }
         }
 
         function startPlaytimeTimer() {
@@ -643,20 +656,19 @@
                         localStorage.setItem('chess_player_stats', JSON.stringify(userState.stats));
                     } catch (e) {}
 
-                    // Flash HUD Label
                     const label = document.getElementById('next-reward-label');
                     if (label) {
-                        label.innerText = "REWARD CLAIMED! +5";
-                        label.className = "text-[9px] text-green-400 font-extrabold uppercase tracking-wider animate-bounce";
+                        label.innerText = "+5 CLAIMED!";
+                        label.className = "text-[8px] text-green-400 font-extrabold uppercase tracking-wider animate-bounce";
                         setTimeout(() => {
                             if (label) {
-                                label.innerText = "+5 Coins in";
-                                label.className = "text-[9px] text-amber-400 font-bold uppercase tracking-wider";
+                                label.innerText = "+5 in";
+                                label.className = "text-[8px] text-amber-400 font-bold uppercase tracking-wider";
                             }
                         }, 3000);
                     }
 
-                    rewardCountdown = 180; // Reset 3-min timer loop
+                    rewardCountdown = 180;
                     updateHUD();
                 }
 
@@ -674,7 +686,14 @@
             scene.fog = new THREE.FogExp2(0x070913, 0.015);
 
             camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 14, 12);
+            
+            // Adjust Camera Distance dynamically for Mobile Screen Ratio
+            const isMobile = window.innerWidth < 640;
+            if (isMobile) {
+                camera.position.set(0, 19, 15);
+            } else {
+                camera.position.set(0, 14, 12);
+            }
 
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -688,16 +707,16 @@
             controls.dampingFactor = 0.05;
             controls.maxPolarAngle = Math.PI / 2 - 0.05;
             controls.minDistance = 6;
-            controls.maxDistance = 25;
+            controls.maxDistance = 30;
 
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
             scene.add(ambientLight);
 
             const dirLight = new THREE.DirectionalLight(0xfff5e6, 1.5);
             dirLight.position.set(10, 22, 16);
             dirLight.castShadow = true;
-            dirLight.shadow.mapSize.width = 2048;
-            dirLight.shadow.mapSize.height = 2048;
+            dirLight.shadow.mapSize.width = 1024;
+            dirLight.shadow.mapSize.height = 1024;
             dirLight.shadow.bias = -0.0005;
             scene.add(dirLight);
 
@@ -722,7 +741,9 @@
             create3DHandMesh();
 
             window.addEventListener('resize', onWindowResize);
-            window.addEventListener('pointerdown', onPointerDown);
+            
+            // Register both pointerdown and touchstart for optimal mobile response
+            renderer.domElement.addEventListener('pointerdown', onPointerDown);
 
             animate();
         }
@@ -947,18 +968,27 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+
+            // Responsive camera view adjustment
+            const isMobile = window.innerWidth < 640;
+            if (isMobile) {
+                camera.position.set(0, 19, 15);
+            }
         }
 
         function onPointerDown(event) {
             if (gameState.isGameOver || isAnimatingMove) return;
 
-            // Calculate mouse position in normalized device coordinates
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            const clientX = event.clientX || (event.touches && event.touches[0].clientX);
+            const clientY = event.clientY || (event.touches && event.touches[0].clientY);
+
+            if (!clientX || !clientY) return;
+
+            mouse.x = (clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(clientY / window.innerHeight) * 2 + 1;
 
             raycaster.setFromCamera(mouse, camera);
 
-            // Check intersections with board squares
             const intersects = raycaster.intersectObjects(boardSquareGroup.children);
             if (intersects.length > 0) {
                 const clickedSquare = intersects[0].object;
@@ -967,13 +997,11 @@
                 const r = clickedSquare.userData.row;
                 const c = clickedSquare.userData.col;
 
-                // Check if clicking on a valid move target
                 const isTargetValid = gameState.validMoves.some(m => m.r === r && m.c === c);
 
                 if (gameState.selectedSquare && isTargetValid) {
                     makeMove(gameState.selectedSquare.r, gameState.selectedSquare.c, r, c);
                 } else {
-                    // Selecting a piece
                     const piece = gameState.board[r][c];
                     if (piece) {
                         const isWhite = piece === piece.toUpperCase();
@@ -1006,7 +1034,6 @@
         function saveGameToStorage() {
             if (gameState.isGameOver) return;
             try {
-                // Ensure active board and full turn state are serialized cleanly
                 const dataToSave = {
                     board: gameState.board,
                     turn: gameState.turn,
@@ -1034,7 +1061,6 @@
                 const parsed = JSON.parse(saved);
                 if (!parsed || !parsed.board || parsed.isGameOver) return false;
 
-                // Load and restore all saved match properties
                 gameState.board = parsed.board;
                 gameState.turn = parsed.turn || 'w';
                 gameState.mode = parsed.mode || 'pve';
@@ -1045,13 +1071,11 @@
                 gameState.hasMoved = parsed.hasMoved || {};
                 gameState.isGameOver = false;
 
-                // Re-render board pieces and refresh interface
                 buildPieces3D();
                 clearHighlights();
                 updateHUD();
                 updateHintButtonUI();
 
-                // Hide main menu modal if open
                 const menuModal = document.getElementById('menu-modal');
                 if (menuModal) menuModal.classList.add('hidden');
 
@@ -1067,56 +1091,7 @@
             const btnText = document.getElementById('save-btn-text');
             if (btnText) {
                 btnText.innerText = "Saved!";
-                setTimeout(() => { btnText.innerText = "Save Game"; }, 2000);
-            }
-        }
-        window.onload = function() {
-            let progress = 0;
-            const loadingBar = document.getElementById('loading-bar');
-            const loadingText = document.getElementById('loading-text');
-            const loadingScreen = document.getElementById('loading-screen');
-
-            const interval = setInterval(() => {
-                progress += 25;
-                if (loadingBar) loadingBar.style.width = progress + '%';
-                if (loadingText) loadingText.innerText = `Initializing 3D Geometry... ${progress}%`;
-                if (progress >= 100) {
-                    clearInterval(interval);
-                    if (loadingScreen) {
-                        loadingScreen.style.opacity = '0';
-                        setTimeout(() => loadingScreen.remove(), 700);
-                    }
-                    init3D();
-                    sound.startPeacefulMusic();
-                    
-                    // Always perform auto-save check on load
-                    const hasSavedMatch = checkAndShowResumeOption();
-                    if (!hasSavedMatch) {
-                        resetInitialBoard();
-                        buildPieces3D();
-                    }
-                }
-            }, 120);
-
-            setupUIEvents();
-            startPlaytimeTimer();
-        };
-
-        function checkAndShowResumeOption() {
-            try {
-                const saved = localStorage.getItem('chess_saved_game');
-                const banner = document.getElementById('resume-game-banner');
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    if (parsed && parsed.board && !parsed.isGameOver) {
-                        if (banner) banner.classList.remove('hidden');
-                        return true;
-                    }
-                }
-                if (banner) banner.classList.add('hidden');
-                return false;
-            } catch (e) {
-                return false;
+                setTimeout(() => { btnText.innerText = "Save"; }, 2000);
             }
         }
 
@@ -1134,11 +1109,9 @@
                 const dir = isWhite ? -1 : 1;
                 const nextR = r + dir;
                 
-                // 1 step forward
                 if (nextR >= 0 && nextR < 8 && !gameState.board[nextR][c]) {
                     moves.push({ r: nextR, c: c });
                     
-                    // 2 steps forward on initial move
                     const startRow = isWhite ? 6 : 1;
                     const twoStepR = r + dir * 2;
                     if (r === startRow && twoStepR >= 0 && twoStepR < 8 && !gameState.board[twoStepR][c] && !gameState.board[nextR][c]) {
@@ -1146,7 +1119,6 @@
                     }
                 }
 
-                // Diagonal captures
                 [-1, 1].forEach(dc => {
                     const capR = r + dir;
                     const capC = c + dc;
@@ -1218,7 +1190,7 @@
                 const target = gameState.board[toR][toC];
 
                 const fileNames = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-                const moveNotation = `${piece.toUpperCase()}${fileNames[fromC]}${8 - fromR} → ${fileNames[toC]}${8 - toR}${target ? ' (Capture)' : ''}`;
+                const moveNotation = `${piece.toUpperCase()}${fileNames[fromC]}${8 - fromR} → ${fileNames[toC]}${8 - toR}${target ? ' (x)' : ''}`;
                 gameState.moveHistory.push(moveNotation);
 
                 if (target) {
@@ -1293,9 +1265,9 @@
         function updateHintButtonUI() {
             const btn = document.getElementById('hint-btn-text');
             if (gameState.hintsRemaining > 0) {
-                btn.innerText = `Hint (${gameState.hintsRemaining} Left)`;
+                btn.innerText = `Hint (${gameState.hintsRemaining})`;
             } else {
-                btn.innerText = `0 Hints Left (Get More)`;
+                btn.innerText = `0 Hints`;
             }
         }
 
@@ -1307,11 +1279,11 @@
             const turnDot = document.getElementById('turn-indicator-dot');
             if (turnText && turnDot) {
                 if (gameState.turn === 'w') {
-                    turnText.innerText = gameState.mode === 'pve' ? "Your Turn (White)" : "White's Turn";
-                    turnDot.className = "w-3.5 h-3.5 rounded-full bg-amber-400 animate-pulse";
+                    turnText.innerText = gameState.mode === 'pve' ? "Your Turn" : "White's Turn";
+                    turnDot.className = "w-3 h-3 rounded-full bg-amber-400 animate-pulse";
                 } else {
                     turnText.innerText = gameState.mode === 'pve' ? "AI Thinking..." : "Black's Turn";
-                    turnDot.className = "w-3.5 h-3.5 rounded-full bg-purple-400 animate-pulse";
+                    turnDot.className = "w-3 h-3 rounded-full bg-purple-400 animate-pulse";
                 }
             }
         }
@@ -1327,7 +1299,6 @@
             if (status === 'win') reward = 100;
             else if (status === 'draw') reward = 50;
             else if (status === 'loss') reward = 10;
-            else reward = 0; // Resign awards 0 coins
 
             if (status === 'win') userState.stats.wins++;
             else userState.stats.losses++;
@@ -1350,7 +1321,7 @@
                 movesListEl.appendChild(div);
             });
 
-            document.getElementById('review-rating-title').innerText = status === 'win' ? "Grandmaster Expert (92%)" : "Tactical Competitor (74%)";
+            document.getElementById('review-rating-title').innerText = status === 'win' ? "Grandmaster Rating (92%)" : "Tactical Rating (74%)";
             document.getElementById('review-rating-desc').innerText = message;
             document.getElementById('game-review-modal').classList.remove('hidden');
         }
@@ -1365,8 +1336,8 @@
                 const loaded = loadSavedGameFromStorage();
                 const loadText = document.getElementById('load-btn-text');
                 if (loadText) {
-                    loadText.innerText = loaded ? "Loaded!" : "No Save Found";
-                    setTimeout(() => { loadText.innerText = "Load Game"; }, 2000);
+                    loadText.innerText = loaded ? "Loaded!" : "No Save";
+                    setTimeout(() => { loadText.innerText = "Load"; }, 2000);
                 }
             };
 
@@ -1396,9 +1367,9 @@
             document.querySelectorAll('.gfx-btn').forEach(btn => {
                 btn.onclick = () => {
                     document.querySelectorAll('.gfx-btn').forEach(b => {
-                        b.className = "gfx-btn py-2.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold text-xs cursor-pointer";
+                        b.className = "gfx-btn py-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold text-[11px] cursor-pointer";
                     });
-                    btn.className = "gfx-btn py-2.5 rounded-xl border-2 border-amber-500 bg-amber-500/20 text-white font-bold text-xs cursor-pointer";
+                    btn.className = "gfx-btn py-2 rounded-xl border-2 border-amber-500 bg-amber-500/20 text-white font-bold text-[11px] cursor-pointer";
                     const gfx = btn.getAttribute('data-gfx');
                     userState.gfxQuality = gfx;
                     if (renderer) {
@@ -1449,8 +1420,8 @@
                 const pveBtn = document.getElementById('mode-pve');
                 const pvpBtn = document.getElementById('mode-pvp');
                 const aiCont = document.getElementById('ai-level-container');
-                if (pveBtn) pveBtn.className = "py-3 px-4 rounded-xl border-2 border-amber-500 bg-amber-500/20 text-white font-bold text-sm transition flex items-center justify-center space-x-2 cursor-pointer";
-                if (pvpBtn) pvpBtn.className = "py-3 px-4 rounded-xl border-2 border-slate-700 bg-slate-800/60 text-slate-400 font-bold text-sm transition flex items-center justify-center space-x-2 cursor-pointer";
+                if (pveBtn) pveBtn.className = "py-2.5 px-3 rounded-xl border-2 border-amber-500 bg-amber-500/20 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-2 cursor-pointer";
+                if (pvpBtn) pvpBtn.className = "py-2.5 px-3 rounded-xl border-2 border-slate-700 bg-slate-800/60 text-slate-400 font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-2 cursor-pointer";
                 if (aiCont) aiCont.classList.remove('hidden');
             });
 
@@ -1459,8 +1430,8 @@
                 const pveBtn = document.getElementById('mode-pve');
                 const pvpBtn = document.getElementById('mode-pvp');
                 const aiCont = document.getElementById('ai-level-container');
-                if (pvpBtn) pvpBtn.className = "py-3 px-4 rounded-xl border-2 border-amber-500 bg-amber-500/20 text-white font-bold text-sm transition flex items-center justify-center space-x-2 cursor-pointer";
-                if (pveBtn) pveBtn.className = "py-3 px-4 rounded-xl border-2 border-slate-700 bg-slate-800/60 text-slate-400 font-bold text-sm transition flex items-center justify-center space-x-2 cursor-pointer";
+                if (pvpBtn) pvpBtn.className = "py-2.5 px-3 rounded-xl border-2 border-amber-500 bg-amber-500/20 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-2 cursor-pointer";
+                if (pveBtn) pveBtn.className = "py-2.5 px-3 rounded-xl border-2 border-slate-700 bg-slate-800/60 text-slate-400 font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-2 cursor-pointer";
                 if (aiCont) aiCont.classList.add('hidden');
             });
 
@@ -1572,7 +1543,7 @@
             });
 
             bindClick('btn-resign', () => {
-                endGame('resign', 'You resigned the match. (0 Coins awarded for resignation)');
+                endGame('resign', 'You resigned the match.');
             });
 
             bindClick('btn-review-close', () => {
