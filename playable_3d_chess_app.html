@@ -1,0 +1,1593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Chess Legends</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Three.js & OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+            overflow: hidden;
+            background-color: #0b0f19;
+        }
+
+        .font-cinzel {
+            font-family: 'Cinzel', serif;
+        }
+
+        /* 3D Canvas Container */
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* UI Overlay Layer */
+        .ui-layer {
+            position: relative;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .interactive {
+            pointer-events: auto !important;
+        }
+
+        /* Custom Glassmorphism */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.78);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(217, 119, 6, 0.6);
+            border-radius: 4px;
+        }
+
+        /* Animated Loading Progress */
+        @keyframes pulse-glow {
+            0%, 100% { filter: drop-shadow(0 0 15px rgba(245, 158, 11, 0.6)); }
+            50% { filter: drop-shadow(0 0 30px rgba(245, 158, 11, 0.9)); }
+        }
+        .glow-effect {
+            animation: pulse-glow 2.5s infinite;
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen">
+
+    <!-- Loading Screen Overlay -->
+    <div id="loading-screen" class="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center p-6 transition-opacity duration-700">
+        <div class="text-center max-w-md w-full">
+            <div class="w-24 h-24 mx-auto mb-6 bg-amber-500/10 border-2 border-amber-500/40 rounded-2xl flex items-center justify-center glow-effect">
+                <i class="fa-solid fa-chess-king text-5xl text-amber-500"></i>
+            </div>
+            <h1 class="text-3xl font-extrabold tracking-wider text-amber-400 font-cinzel mb-2">3D CHESS LEGENDS</h1>
+            <p class="text-slate-400 text-sm mb-8">Rendering Grandmaster Environment...</p>
+            
+            <!-- Progress Bar -->
+            <div class="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden mb-3 border border-slate-700">
+                <div id="loading-bar" class="bg-gradient-to-r from-amber-600 to-amber-400 h-full w-0 transition-all duration-300"></div>
+            </div>
+            <span id="loading-text" class="text-xs text-amber-500 font-mono">Initializing 3D Geometry... 0%</span>
+        </div>
+    </div>
+
+    <!-- 3D WebGL Canvas Container -->
+    <div id="canvas-container"></div>
+
+    <!-- UI Overlay Layer -->
+    <div class="ui-layer h-screen flex flex-col justify-between p-3 sm:p-5">
+        
+        <!-- Header Controls -->
+        <header class="flex justify-between items-center w-full max-w-7xl mx-auto interactive">
+            <div class="flex items-center space-x-3 glass-panel px-4 py-2.5 rounded-2xl shadow-xl">
+                <button id="btn-menu-open" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 transition cursor-pointer" title="Main Menu">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
+                <button id="btn-stats-open" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 transition cursor-pointer" title="Player Stats & Index">
+                    <i class="fa-solid fa-chart-pie text-lg"></i>
+                </button>
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-crown text-amber-400 text-xl"></i>
+                    <span class="font-bold font-cinzel text-lg tracking-wide hidden sm:inline">CHESS 3D</span>
+                </div>
+            </div>
+
+            <!-- Currency & Status Display -->
+            <div class="flex items-center space-x-3">
+                <div class="glass-panel px-4 py-2 rounded-2xl flex items-center space-x-2 border border-amber-500/30">
+                    <i class="fa-solid fa-coins text-amber-400 text-lg"></i>
+                    <span id="coin-balance" class="font-bold text-amber-300 font-mono text-lg">50</span>
+                </div>
+                <!-- Session Playtime Reward Indicator -->
+                <div class="glass-panel px-3 py-2 rounded-2xl flex items-center space-x-2 border border-slate-700/60" title="Active Playtime Session Reward">
+                    <i class="fa-solid fa-gift text-amber-400 text-sm animate-bounce"></i>
+                    <div class="flex flex-col text-left">
+                        <span id="next-reward-label" class="text-[9px] text-amber-400 font-bold uppercase tracking-wider">+5 Coins in</span>
+                        <span id="playtime-timer" class="font-mono text-xs text-slate-200 font-semibold">03:00</span>
+                    </div>
+                </div>
+                <button id="btn-hint-trigger" class="interactive glass-panel px-3.5 py-2 rounded-2xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 font-semibold text-xs transition flex items-center space-x-2 cursor-pointer">
+                    <i class="fa-solid fa-lightbulb text-amber-400"></i>
+                    <span id="hint-btn-text">Hint (1 Left)</span>
+                </button>
+                <button id="btn-settings-open" class="interactive glass-panel p-2.5 rounded-2xl text-slate-300 hover:text-white transition cursor-pointer" title="Settings">
+                    <i class="fa-solid fa-gear text-lg"></i>
+                </button>
+                <button id="btn-save-game" class="interactive glass-panel px-3.5 py-2 rounded-2xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 font-semibold text-xs transition flex items-center space-x-1.5 cursor-pointer" title="Save Current Game Progress">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    <span id="save-btn-text">Save Game</span>
+                </button>
+                <button id="btn-load-game" class="interactive glass-panel px-3.5 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold text-xs transition flex items-center space-x-1.5 cursor-pointer" title="Load Saved Game">
+                    <i class="fa-solid fa-folder-open"></i>
+                    <span id="load-btn-text">Load Game</span>
+                </button>
+                <button id="btn-shop-open" class="interactive glass-panel px-4 py-2 rounded-2xl hover:bg-amber-600/20 text-amber-400 font-semibold text-sm transition flex items-center space-x-2 border border-amber-500/30 cursor-pointer">
+                    <i class="fa-solid fa-store"></i>
+                    <span class="hidden sm:inline">Theme Shop</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Footer / Turn HUD -->
+        <footer class="w-full max-w-xl mx-auto glass-panel p-3.5 rounded-2xl flex items-center justify-between interactive shadow-xl border border-amber-500/20">
+            <div class="flex items-center space-x-2">
+                <div id="turn-indicator-dot" class="w-3.5 h-3.5 rounded-full bg-amber-400 animate-pulse"></div>
+                <span id="turn-indicator-text" class="font-bold text-sm text-slate-200">White's Turn</span>
+            </div>
+            <button id="btn-resign" class="px-4 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 rounded-xl font-bold text-xs transition cursor-pointer">
+                Resign Match (0 Coins)
+            </button>
+        </footer>
+    </div>
+
+    <!-- HINT SHOP MODAL -->
+    <div id="hint-shop-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 interactive">
+        <div class="glass-panel p-6 rounded-3xl max-w-sm w-full border border-amber-500/40 shadow-2xl text-center">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold font-cinzel text-amber-400 flex items-center gap-2">
+                    <i class="fa-solid fa-lightbulb"></i> Get More Hints
+                </h3>
+                <button id="btn-hint-shop-close" class="p-2 rounded-xl text-slate-400 hover:text-white cursor-pointer">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <p class="text-slate-300 text-xs mb-5">You are out of hints! Purchase additional hints using your earned coins.</p>
+            
+            <div class="space-y-3 mb-6">
+                <button id="btn-buy-hint-1" class="w-full p-3.5 rounded-2xl bg-slate-900/80 hover:bg-slate-800 border border-amber-500/40 flex items-center justify-between text-left transition cursor-pointer">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400 font-bold">
+                            1x
+                        </div>
+                        <div>
+                            <p class="font-bold text-sm text-slate-100">1 Hint</p>
+                            <p class="text-[10px] text-slate-400">100 Coins</p>
+                        </div>
+                    </div>
+                    <span class="font-bold text-amber-400 text-sm flex items-center gap-1 font-mono">
+                        100 <i class="fa-solid fa-coins"></i>
+                    </span>
+                </button>
+
+                <button id="btn-buy-hint-5" class="w-full p-3.5 rounded-2xl bg-gradient-to-r from-amber-600/30 to-amber-500/10 hover:from-amber-600/40 hover:to-amber-500/20 border-2 border-amber-500/70 flex items-center justify-between text-left transition cursor-pointer">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-9 h-9 rounded-xl bg-amber-500 text-slate-950 font-extrabold flex items-center justify-center shadow-md">
+                            5x
+                        </div>
+                        <div>
+                            <p class="font-bold text-sm text-amber-300 flex items-center gap-1">
+                                5 Hints <span class="text-[9px] bg-amber-500/30 text-amber-300 px-1.5 py-0.5 rounded font-semibold uppercase">Value Pack</span>
+                            </p>
+                            <p class="text-[10px] text-slate-400">500 Coins</p>
+                        </div>
+                    </div>
+                    <span class="font-bold text-amber-400 text-sm flex items-center gap-1 font-mono">
+                        500 <i class="fa-solid fa-coins"></i>
+                    </span>
+                </button>
+            </div>
+            <button id="btn-hint-shop-cancel" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs cursor-pointer">Back to Game</button>
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settings-modal" class="hidden fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 interactive">
+        <div class="glass-panel p-6 rounded-3xl max-w-md w-full border border-amber-500/30 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold font-cinzel text-amber-400 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders"></i> Game Settings
+                </h3>
+                <button id="btn-settings-close" class="p-2 rounded-xl text-slate-400 hover:text-white cursor-pointer">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Graphics Quality Option -->
+            <div class="mb-6">
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Graphics Quality</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <button data-gfx="normal" class="gfx-btn py-2.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold text-xs cursor-pointer">Normal</button>
+                    <button data-gfx="high" class="gfx-btn py-2.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold text-xs cursor-pointer">High</button>
+                    <button data-gfx="ultra" class="gfx-btn py-2.5 rounded-xl border-2 border-amber-500 bg-amber-500/20 text-white font-bold text-xs cursor-pointer">Ultra 3D</button>
+                </div>
+            </div>
+
+            <!-- Audio Sliders -->
+            <div class="space-y-4 mb-6">
+                <div>
+                    <div class="flex justify-between text-xs font-bold text-slate-400 uppercase mb-1">
+                        <span>Master Volume</span>
+                        <span id="volume-val-master">80%</span>
+                    </div>
+                    <input type="range" id="slider-volume-master" min="0" max="100" value="80" class="w-full accent-amber-500 bg-slate-800 rounded-lg cursor-pointer">
+                </div>
+                <div>
+                    <div class="flex justify-between text-xs font-bold text-slate-400 uppercase mb-1">
+                        <span>SFX Volume</span>
+                        <span id="volume-val-sfx">100%</span>
+                    </div>
+                    <input type="range" id="slider-volume-sfx" min="0" max="100" value="100" class="w-full accent-amber-500 bg-slate-800 rounded-lg cursor-pointer">
+                </div>
+            </div>
+
+            <!-- Manual Save Action inside Settings -->
+            <div class="mb-6 pt-2 border-t border-slate-800">
+                <button id="btn-settings-manual-save" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 border border-amber-500/40 text-amber-300 font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer transition">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    <span>Save Current Game Progress Now</span>
+                </button>
+            </div>
+
+            <button id="btn-settings-save" class="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-bold text-sm rounded-xl transition cursor-pointer">
+                Save & Apply Settings
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN MENU MODAL -->
+    <div id="menu-modal" class="fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 interactive">
+        <div class="glass-panel p-6 sm:p-8 rounded-3xl max-w-xl w-full border border-amber-500/30 shadow-2xl text-center">
+            <h2 class="text-3xl font-extrabold font-cinzel text-amber-400 mb-1">CHESS LEGENDS 3D</h2>
+            <p class="text-slate-400 text-sm mb-6">Select Play Mode & AI Difficulty Level</p>
+
+            <!-- Resume Saved Game Banner -->
+            <div id="resume-game-banner" class="hidden mb-6 p-4 bg-gradient-to-r from-amber-500/20 to-amber-600/10 border-2 border-amber-500/60 rounded-2xl flex items-center justify-between text-left shadow-lg">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold text-lg">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-amber-300 text-sm">Saved Match Found!</h4>
+                        <p class="text-slate-400 text-xs">Resume your previous game right where you left off.</p>
+                    </div>
+                </div>
+                <button id="btn-resume-saved" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition cursor-pointer shadow-md">
+                    Resume Game
+                </button>
+            </div>
+
+            <!-- Mode Selector -->
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Select Game Mode</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button id="mode-pve" class="py-3 px-4 rounded-xl border-2 border-amber-500 bg-amber-500/20 text-white font-bold text-sm transition flex items-center justify-center space-x-2 cursor-pointer">
+                            <i class="fa-solid fa-robot text-amber-400"></i>
+                            <span>vs AI</span>
+                        </button>
+                        <button id="mode-pvp" class="py-3 px-4 rounded-xl border-2 border-slate-700 bg-slate-800/60 text-slate-400 font-bold text-sm transition flex items-center justify-center space-x-2 cursor-pointer">
+                            <i class="fa-solid fa-users text-amber-400"></i>
+                            <span>Pass & Play</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- AI Level Selection -->
+                <div id="ai-level-container">
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">AI Difficulty Level</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button data-level="1" class="lvl-btn py-2.5 rounded-xl border-2 border-amber-500 bg-amber-500/20 text-white font-bold text-xs cursor-pointer">Lvl 1 (Novice)</button>
+                        <button data-level="2" class="lvl-btn py-2.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold text-xs cursor-pointer">Lvl 2 (Club)</button>
+                        <button data-level="3" class="lvl-btn py-2.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold text-xs cursor-pointer">Lvl 3 (Master)</button>
+                    </div>
+                </div>
+            </div>
+
+            <button id="btn-start-game" class="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-extrabold text-sm rounded-xl shadow-lg transition cursor-pointer">
+                Start New Match
+            </button>
+        </div>
+    </div>
+
+    <!-- PLAYER STATS MODAL -->
+    <div id="stats-modal" class="hidden fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 interactive">
+        <div class="glass-panel p-6 rounded-3xl max-w-sm w-full border border-amber-500/30 shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold font-cinzel text-amber-400 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie"></i> Player Index
+                </h3>
+                <button id="btn-stats-close" class="p-2 rounded-xl text-slate-400 hover:text-white cursor-pointer">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mb-5">
+                <div class="p-3 bg-slate-900/60 rounded-2xl border border-slate-800">
+                    <p class="text-[10px] text-slate-400 uppercase font-bold">Matches Played</p>
+                    <p id="stat-played" class="text-xl font-extrabold text-amber-400 font-mono">0</p>
+                </div>
+                <div class="p-3 bg-slate-900/60 rounded-2xl border border-slate-800">
+                    <p class="text-[10px] text-slate-400 uppercase font-bold">Victories</p>
+                    <p id="stat-wins" class="text-xl font-extrabold text-green-400 font-mono">0</p>
+                </div>
+                <div class="p-3 bg-slate-900/60 rounded-2xl border border-slate-800">
+                    <p class="text-[10px] text-slate-400 uppercase font-bold">Win Rate</p>
+                    <p id="stat-winrate" class="text-xl font-extrabold text-cyan-400 font-mono">0%</p>
+                </div>
+                <div class="p-3 bg-slate-900/60 rounded-2xl border border-slate-800">
+                    <p class="text-[10px] text-slate-400 uppercase font-bold">Coins Earned</p>
+                    <p id="stat-coins-earned" class="text-xl font-extrabold text-yellow-400 font-mono">0</p>
+                </div>
+            </div>
+            <button id="btn-stats-ok" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold rounded-xl text-sm border border-amber-500/30 cursor-pointer">Close</button>
+        </div>
+    </div>
+
+    <!-- GAME REVIEW & RATING MODAL -->
+    <div id="game-review-modal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 interactive">
+        <div class="glass-panel p-6 rounded-3xl max-w-lg w-full border border-amber-500/40 shadow-2xl">
+            <div class="text-center mb-5">
+                <div class="w-14 h-14 mx-auto mb-2 bg-amber-500/20 border border-amber-500/50 rounded-2xl flex items-center justify-center">
+                    <i class="fa-solid fa-trophy text-2xl text-amber-400"></i>
+                </div>
+                <h3 class="text-2xl font-bold font-cinzel text-amber-400">Match Review</h3>
+                <p id="review-rating-title" class="text-sm font-semibold text-slate-300 mt-1">Grandmaster Rating: 82%</p>
+                <p id="review-rating-desc" class="text-xs text-slate-400 mt-1">Solid tactical opening and control.</p>
+            </div>
+
+            <!-- Move History Review List -->
+            <div class="mb-5">
+                <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Move History</h4>
+                <div id="review-moves-list" class="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 max-h-40 overflow-y-auto custom-scrollbar space-y-1">
+                    <!-- Moves inserted dynamically -->
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button id="btn-review-close" class="w-1/2 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl transition cursor-pointer">Close</button>
+                <button id="btn-review-next" class="w-1/2 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl transition cursor-pointer shadow-md">Main Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- THEME SHOP MODAL -->
+    <div id="shop-modal" class="hidden fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 interactive">
+        <div class="glass-panel p-6 rounded-3xl max-w-xl w-full border border-amber-500/30 shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold font-cinzel text-amber-400 flex items-center gap-2">
+                    <i class="fa-solid fa-store"></i> Theme Shop
+                </h3>
+                <button id="btn-shop-close" class="p-2 rounded-xl text-slate-400 hover:text-white cursor-pointer">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Board & Piece Skins</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div class="p-3 rounded-2xl bg-slate-800/60 border border-amber-500/50 flex flex-col justify-between">
+                            <div>
+                                <div class="h-16 rounded-xl bg-gradient-to-r from-amber-200 to-amber-800 mb-2 border border-slate-600"></div>
+                                <h5 class="font-bold text-sm text-slate-100">Classic Wood</h5>
+                                <p class="text-[10px] text-slate-400 mb-3">Traditional look</p>
+                            </div>
+                            <button data-theme="classic" class="theme-select-btn w-full py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs cursor-pointer">Equipped</button>
+                        </div>
+                        <div class="p-3 rounded-2xl bg-slate-800/60 border border-slate-700 flex flex-col justify-between">
+                            <div>
+                                <div class="h-16 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-900 mb-2 border border-slate-600"></div>
+                                <h5 class="font-bold text-sm text-slate-100">Cyber Neon</h5>
+                                <p class="text-[10px] text-slate-400 mb-3">Futuristic glow</p>
+                            </div>
+                            <button data-theme="neon" data-cost="500" class="theme-select-btn w-full py-1.5 rounded-xl bg-slate-700 hover:bg-amber-600 text-amber-300 font-bold text-xs flex items-center justify-center space-x-1 cursor-pointer">
+                                <i class="fa-solid fa-coins text-amber-400"></i>
+                                <span>500 Coins</span>
+                            </button>
+                        </div>
+                        <div class="p-3 rounded-2xl bg-slate-800/60 border border-slate-700 flex flex-col justify-between">
+                            <div>
+                                <div class="h-16 rounded-xl bg-gradient-to-r from-slate-200 to-slate-900 mb-2 border border-slate-600"></div>
+                                <h5 class="font-bold text-sm text-slate-100">Monochrome Marble</h5>
+                                <p class="text-[10px] text-slate-400 mb-3">Polished marble</p>
+                            </div>
+                            <button data-theme="marble" data-cost="1000" class="theme-select-btn w-full py-1.5 rounded-xl bg-slate-700 hover:bg-amber-600 text-amber-300 font-bold text-xs flex items-center justify-center space-x-1 cursor-pointer">
+                                <i class="fa-solid fa-coins text-amber-400"></i>
+                                <span>1000 Coins</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CHESS & THREE.JS LOGIC -->
+    <script>
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+                this.volumeMaster = 0.8;
+                this.volumeSFX = 1.0;
+                this.musicGain = null;
+                this.isMusicPlaying = false;
+                this.musicInterval = null;
+            }
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            startPeacefulMusic() {
+                this.init();
+                if (this.isMusicPlaying) return;
+                this.isMusicPlaying = true;
+
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+
+                const notes = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 659.25, 783.99];
+
+                this.musicGain = this.ctx.createGain();
+                this.musicGain.gain.setValueAtTime(0.45 * this.volumeMaster, this.ctx.currentTime);
+                this.musicGain.connect(this.ctx.destination);
+
+                this.musicInterval = setInterval(() => {
+                    if (this.muted || !this.isMusicPlaying) return;
+
+                    try {
+                        const note = notes[Math.floor(Math.random() * notes.length)];
+                        const osc = this.ctx.createOscillator();
+                        const noteGain = this.ctx.createGain();
+
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(note, this.ctx.currentTime);
+
+                        const now = this.ctx.currentTime;
+                        noteGain.gain.setValueAtTime(0.001, now);
+                        noteGain.gain.linearRampToValueAtTime(0.3 * this.volumeMaster, now + 0.4);
+                        noteGain.gain.exponentialRampToValueAtTime(0.0001, now + 3.8);
+
+                        osc.connect(noteGain);
+                        noteGain.connect(this.musicGain);
+
+                        osc.start(now);
+                        osc.stop(now + 3.9);
+                    } catch (e) {}
+                }, 2000);
+            }
+
+            play(type) {
+                if (this.muted) return;
+                try {
+                    this.init();
+                    if (this.ctx.state === 'suspended') this.ctx.resume();
+                    
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    const now = this.ctx.currentTime;
+                    const finalVol = 0.4 * this.volumeMaster * this.volumeSFX;
+
+                    if (type === 'move') {
+                        osc.frequency.setValueAtTime(320, now);
+                        osc.frequency.exponentialRampToValueAtTime(160, now + 0.08);
+                        gain.gain.setValueAtTime(finalVol, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                        osc.start(now);
+                        osc.stop(now + 0.08);
+                    } else if (type === 'capture') {
+                        osc.frequency.setValueAtTime(650, now);
+                        osc.frequency.exponentialRampToValueAtTime(220, now + 0.12);
+                        gain.gain.setValueAtTime(finalVol * 1.4, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+                        osc.start(now);
+                        osc.stop(now + 0.12);
+                    }
+                } catch (e) {}
+            }
+        }
+
+        let sound = new SoundEngine();
+
+        let userState = {
+            coins: parseInt(localStorage.getItem('chess_coins') || '50'),
+            unlockedThemes: JSON.parse(localStorage.getItem('chess_themes') || '["classic"]'),
+            currentTheme: localStorage.getItem('chess_active_theme') || 'classic',
+            unlockedLevel: parseInt(localStorage.getItem('chess_unlocked_lvl') || '1'),
+            stats: JSON.parse(localStorage.getItem('chess_player_stats') || '{"played":0,"wins":0,"losses":0,"coinsEarned":0}'),
+            gfxQuality: 'ultra'
+        };
+
+        let sessionPlaytimeSeconds = 0;
+        let rewardCountdown = 180; // 3-minute cycle countdown in seconds
+
+        let scene, camera, renderer, controls;
+        let boardSquareGroup, pieceGroup, highlightGroup, handMeshGroup;
+        let raycaster, mouse;
+        let boardSquareMeshes = [];
+        let piece3DMeshes = [];
+        let handMesh = null;
+        let isAnimatingMove = false;
+
+        let gameState = {
+            mode: 'pve',
+            aiLevel: 1,
+            board: [],
+            turn: 'w',
+            selectedSquare: null,
+            validMoves: [],
+            moveHistory: [],
+            capturedPieces: { w: [], b: [] },
+            isGameOver: false,
+            hintsRemaining: 1,
+            hasMoved: {} // Track piece first move for 2-step pawn rule
+        };
+
+        const initialBoardSetup = [
+            ['r','n','b','q','k','b','n','r'],
+            ['p','p','p','p','p','p','p','p'],
+            [null,null,null,null,null,null,null,null],
+            [null,null,null,null,null,null,null,null],
+            [null,null,null,null,null,null,null,null],
+            [null,null,null,null,null,null,null,null],
+            ['P','P','P','P','P','P','P','P'],
+            ['R','N','B','Q','K','B','N','R']
+        ];
+
+        function resetInitialBoard() {
+            gameState.board = JSON.parse(JSON.stringify(initialBoardSetup));
+            gameState.turn = 'w';
+            gameState.selectedSquare = null;
+            gameState.validMoves = [];
+            gameState.moveHistory = [];
+            gameState.capturedPieces = { w: [], b: [] };
+            gameState.isGameOver = false;
+            gameState.hintsRemaining = 1;
+            gameState.hasMoved = {};
+            try {
+                localStorage.removeItem('chess_saved_game');
+            } catch (e) {}
+            updateHUD();
+        }
+
+        window.onload = function() {
+            let progress = 0;
+            const loadingBar = document.getElementById('loading-bar');
+            const loadingText = document.getElementById('loading-text');
+            const loadingScreen = document.getElementById('loading-screen');
+
+            const interval = setInterval(() => {
+                progress += 25;
+                if (loadingBar) loadingBar.style.width = progress + '%';
+                if (loadingText) loadingText.innerText = `Initializing 3D Geometry... ${progress}%`;
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    if (loadingScreen) {
+                        loadingScreen.style.opacity = '0';
+                        setTimeout(() => loadingScreen.remove(), 700);
+                    }
+                    init3D();
+                    sound.startPeacefulMusic();
+                    checkAndShowResumeOption();
+                    loadSavedGameFromStorage();
+                }
+            }, 120);
+
+            setupUIEvents();
+            startPlaytimeTimer();
+        };
+
+        function checkAndShowResumeOption() {
+            try {
+                const saved = localStorage.getItem('chess_saved_game');
+                const banner = document.getElementById('resume-game-banner');
+                if (saved && banner) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed && parsed.board && !parsed.isGameOver) {
+                        banner.classList.remove('hidden');
+                        return;
+                    }
+                }
+                if (banner) banner.classList.add('hidden');
+            } catch (e) {}
+        }
+
+        function startPlaytimeTimer() {
+            setInterval(() => {
+                sessionPlaytimeSeconds++;
+                rewardCountdown--;
+
+                if (rewardCountdown <= 0) {
+                    userState.coins += 5;
+                    userState.stats.coinsEarned += 5;
+                    try {
+                        localStorage.setItem('chess_coins', userState.coins);
+                        localStorage.setItem('chess_player_stats', JSON.stringify(userState.stats));
+                    } catch (e) {}
+
+                    // Flash HUD Label
+                    const label = document.getElementById('next-reward-label');
+                    if (label) {
+                        label.innerText = "REWARD CLAIMED! +5";
+                        label.className = "text-[9px] text-green-400 font-extrabold uppercase tracking-wider animate-bounce";
+                        setTimeout(() => {
+                            if (label) {
+                                label.innerText = "+5 Coins in";
+                                label.className = "text-[9px] text-amber-400 font-bold uppercase tracking-wider";
+                            }
+                        }, 3000);
+                    }
+
+                    rewardCountdown = 180; // Reset 3-min timer loop
+                    updateHUD();
+                }
+
+                const mins = String(Math.floor(rewardCountdown / 60)).padStart(2, '0');
+                const secs = String(rewardCountdown % 60).padStart(2, '0');
+                const timerEl = document.getElementById('playtime-timer');
+                if (timerEl) timerEl.innerText = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        function init3D() {
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x070913);
+            scene.fog = new THREE.FogExp2(0x070913, 0.015);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 14, 12);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 - 0.05;
+            controls.minDistance = 6;
+            controls.maxDistance = 25;
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xfff5e6, 1.5);
+            dirLight.position.set(10, 22, 16);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            dirLight.shadow.bias = -0.0005;
+            scene.add(dirLight);
+
+            const pointLight = new THREE.PointLight(0xd97706, 2.0, 35);
+            pointLight.position.set(-10, 12, -10);
+            scene.add(pointLight);
+
+            boardSquareGroup = new THREE.Group();
+            pieceGroup = new THREE.Group();
+            highlightGroup = new THREE.Group();
+            handMeshGroup = new THREE.Group();
+            scene.add(boardSquareGroup);
+            scene.add(pieceGroup);
+            scene.add(highlightGroup);
+            scene.add(handMeshGroup);
+
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            buildBoard3D();
+            buildPieces3D();
+            create3DHandMesh();
+
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('pointerdown', onPointerDown);
+
+            animate();
+        }
+
+        function buildBoard3D() {
+            while (boardSquareGroup.children.length > 0) {
+                boardSquareGroup.remove(boardSquareGroup.children[0]);
+            }
+            boardSquareMeshes = [];
+
+            const baseGeo = new THREE.BoxGeometry(9.8, 0.2, 9.8);
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3, metalness: 0.8 });
+            const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+            baseMesh.position.y = -0.15;
+            baseMesh.receiveShadow = true;
+            boardSquareGroup.add(baseMesh);
+
+            const isNeon = userState.currentTheme === 'neon';
+            const isMarble = userState.currentTheme === 'marble';
+
+            const lightColor = isNeon ? 0x0ea5e9 : (isMarble ? 0xf8fafc : 0xedd1b0);
+            const darkColor = isNeon ? 0x0f172a : (isMarble ? 0x334155 : 0xb58863);
+
+            for (let r = 0; r < 8; r++) {
+                boardSquareMeshes[r] = [];
+                for (let c = 0; c < 8; c++) {
+                    const isLight = (r + c) % 2 === 0;
+                    const sqGeo = new THREE.BoxGeometry(1.08, 0.05, 1.08);
+                    const sqMat = new THREE.MeshStandardMaterial({
+                        color: isLight ? lightColor : darkColor,
+                        roughness: isMarble ? 0.2 : 0.5,
+                        metalness: isNeon ? 0.7 : 0.1
+                    });
+                    const sqMesh = new THREE.Mesh(sqGeo, sqMat);
+                    sqMesh.position.set(c - 3.5, -0.01, r - 3.5);
+                    sqMesh.receiveShadow = true;
+                    sqMesh.userData = { row: r, col: c };
+                    boardSquareGroup.add(sqMesh);
+                    boardSquareMeshes[r][c] = sqMesh;
+                }
+            }
+        }
+
+        function createPieceMesh(type, color) {
+            const group = new THREE.Group();
+            const isWhite = color === 'w';
+            const matColor = isWhite ? 0xf8fafc : 0x0f172a;
+            const pieceMat = new THREE.MeshStandardMaterial({ color: matColor, roughness: 0.3, metalness: 0.5 });
+            const accentMat = new THREE.MeshStandardMaterial({ color: isWhite ? 0xd97706 : 0x64748b, roughness: 0.4, metalness: 0.6 });
+
+            const baseGeo = new THREE.CylinderGeometry(0.4, 0.45, 0.15, 16);
+            const baseMesh = new THREE.Mesh(baseGeo, pieceMat);
+            baseMesh.castShadow = true;
+            group.add(baseMesh);
+
+            const upperBaseGeo = new THREE.CylinderGeometry(0.32, 0.4, 0.1, 16);
+            const upperBase = new THREE.Mesh(upperBaseGeo, accentMat);
+            upperBase.position.y = 0.1;
+            upperBase.castShadow = true;
+            group.add(upperBase);
+
+            const lowerChar = type.toLowerCase();
+
+            if (lowerChar === 'p') {
+                const bodyGeo = new THREE.ConeGeometry(0.28, 0.6, 16);
+                const body = new THREE.Mesh(bodyGeo, pieceMat);
+                body.position.y = 0.45;
+                body.castShadow = true;
+                group.add(body);
+
+                const headGeo = new THREE.SphereGeometry(0.18, 16, 16);
+                const head = new THREE.Mesh(headGeo, pieceMat);
+                head.position.y = 0.8;
+                head.castShadow = true;
+                group.add(head);
+            } else if (lowerChar === 'r') {
+                const bodyGeo = new THREE.CylinderGeometry(0.3, 0.32, 0.7, 16);
+                const body = new THREE.Mesh(bodyGeo, pieceMat);
+                body.position.y = 0.5;
+                body.castShadow = true;
+                group.add(body);
+
+                const topGeo = new THREE.CylinderGeometry(0.34, 0.3, 0.2, 16);
+                const top = new THREE.Mesh(topGeo, accentMat);
+                top.position.y = 0.95;
+                top.castShadow = true;
+                group.add(top);
+            } else if (lowerChar === 'n') {
+                const bodyGeo = new THREE.CylinderGeometry(0.28, 0.32, 0.6, 16);
+                const body = new THREE.Mesh(bodyGeo, pieceMat);
+                body.position.y = 0.45;
+                body.castShadow = true;
+                group.add(body);
+
+                const headGeo = new THREE.BoxGeometry(0.25, 0.45, 0.35);
+                const head = new THREE.Mesh(headGeo, pieceMat);
+                head.position.set(0, 0.8, 0.05);
+                head.castShadow = true;
+                group.add(head);
+            } else if (lowerChar === 'b') {
+                const bodyGeo = new THREE.ConeGeometry(0.26, 0.8, 16);
+                const body = new THREE.Mesh(bodyGeo, pieceMat);
+                body.position.y = 0.55;
+                body.castShadow = true;
+                group.add(body);
+
+                const ballGeo = new THREE.SphereGeometry(0.1, 12, 12);
+                const ball = new THREE.Mesh(ballGeo, accentMat);
+                ball.position.y = 1.0;
+                ball.castShadow = true;
+                group.add(ball);
+            } else if (lowerChar === 'q') {
+                const bodyGeo = new THREE.CylinderGeometry(0.22, 0.35, 0.9, 16);
+                const body = new THREE.Mesh(bodyGeo, pieceMat);
+                body.position.y = 0.6;
+                body.castShadow = true;
+                group.add(body);
+
+                const crownGeo = new THREE.CylinderGeometry(0.32, 0.22, 0.2, 16);
+                const crown = new THREE.Mesh(crownGeo, accentMat);
+                crown.position.y = 1.1;
+                crown.castShadow = true;
+                group.add(crown);
+            } else if (lowerChar === 'k') {
+                const bodyGeo = new THREE.CylinderGeometry(0.25, 0.36, 1.0, 16);
+                const body = new THREE.Mesh(bodyGeo, pieceMat);
+                body.position.y = 0.65;
+                body.castShadow = true;
+                group.add(body);
+
+                const crossGeo = new THREE.BoxGeometry(0.1, 0.3, 0.1);
+                const cross = new THREE.Mesh(crossGeo, accentMat);
+                cross.position.y = 1.25;
+                cross.castShadow = true;
+                group.add(cross);
+            }
+
+            return group;
+        }
+
+        function buildPieces3D() {
+            while (pieceGroup.children.length > 0) {
+                pieceGroup.remove(pieceGroup.children[0]);
+            }
+            piece3DMeshes = [];
+
+            for (let r = 0; r < 8; r++) {
+                piece3DMeshes[r] = [];
+                for (let c = 0; c < 8; c++) {
+                    const piece = gameState.board && gameState.board[r] ? gameState.board[r][c] : null;
+                    if (piece) {
+                        const color = piece === piece.toUpperCase() ? 'w' : 'b';
+                        const mesh = createPieceMesh(piece, color);
+                        mesh.position.set(c - 3.5, 0.15, r - 3.5);
+                        mesh.userData = { row: r, col: c, piece: piece };
+                        pieceGroup.add(mesh);
+                        piece3DMeshes[r][c] = mesh;
+                    } else {
+                        piece3DMeshes[r][c] = null;
+                    }
+                }
+            }
+        }
+
+        function create3DHandMesh() {
+            const handGroup = new THREE.Group();
+            const skinMat = new THREE.MeshStandardMaterial({ color: 0xedd5b3, roughness: 0.5 });
+            
+            const palmGeo = new THREE.BoxGeometry(0.55, 0.22, 0.65);
+            const palm = new THREE.Mesh(palmGeo, skinMat);
+            palm.castShadow = true;
+            handGroup.add(palm);
+
+            const fingerGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.55, 12);
+            for (let i = -1.5; i <= 1.5; i += 1.0) {
+                const finger = new THREE.Mesh(fingerGeo, skinMat);
+                finger.position.set(i * 0.15, 0.12, -0.38);
+                finger.rotation.x = 0.2;
+                finger.castShadow = true;
+                handGroup.add(finger);
+            }
+
+            handMesh = handGroup;
+            handMesh.position.set(0, 10, 0);
+            handMesh.visible = false;
+            handMeshGroup.add(handMesh);
+        }
+
+        function animateMoveWithHand(fromR, fromC, toR, toC, callback) {
+            if (!handMesh) {
+                callback();
+                return;
+            }
+
+            isAnimatingMove = true;
+            handMesh.visible = true;
+
+            const startX = fromC - 3.5;
+            const startZ = fromR - 3.5;
+            const targetX = toC - 3.5;
+            const targetZ = toR - 3.5;
+
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 0.05;
+                if (progress <= 1) {
+                    const ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
+                    handMesh.position.x = startX + (targetX - startX) * ease;
+                    handMesh.position.z = startZ + (targetZ - startZ) * ease;
+                    handMesh.position.y = 3.0 - Math.sin(progress * Math.PI) * 1.6;
+                } else {
+                    clearInterval(interval);
+                    handMesh.visible = false;
+                    isAnimatingMove = false;
+                    callback();
+                }
+            }, 16);
+        }
+
+        function onWindowResize() {
+            if (!camera || !renderer) return;
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function onPointerDown(event) {
+            if (gameState.isGameOver || isAnimatingMove) return;
+
+            // Calculate mouse position in normalized device coordinates
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            // Check intersections with board squares
+            const intersects = raycaster.intersectObjects(boardSquareGroup.children);
+            if (intersects.length > 0) {
+                const clickedSquare = intersects[0].object;
+                if (!clickedSquare.userData || clickedSquare.userData.row === undefined) return;
+
+                const r = clickedSquare.userData.row;
+                const c = clickedSquare.userData.col;
+
+                // Check if clicking on a valid move target
+                const isTargetValid = gameState.validMoves.some(m => m.r === r && m.c === c);
+
+                if (gameState.selectedSquare && isTargetValid) {
+                    makeMove(gameState.selectedSquare.r, gameState.selectedSquare.c, r, c);
+                } else {
+                    // Selecting a piece
+                    const piece = gameState.board[r][c];
+                    if (piece) {
+                        const isWhite = piece === piece.toUpperCase();
+                        const isCurrentPlayerPiece = (gameState.turn === 'w' && isWhite) || (gameState.turn === 'b' && !isWhite && gameState.mode === 'pvp');
+
+                        if (isCurrentPlayerPiece) {
+                            gameState.selectedSquare = { r, c };
+                            gameState.validMoves = getValidMovesForPiece(r, c);
+                            highlightValidMoves();
+                        } else {
+                            gameState.selectedSquare = null;
+                            gameState.validMoves = [];
+                            clearHighlights();
+                        }
+                    } else {
+                        gameState.selectedSquare = null;
+                        gameState.validMoves = [];
+                        clearHighlights();
+                    }
+                }
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (controls) controls.update();
+            if (renderer && scene && camera) renderer.render(scene, camera);
+        }
+
+        function saveGameToStorage() {
+            if (gameState.isGameOver) return;
+            try {
+                // Ensure active board and full turn state are serialized cleanly
+                const dataToSave = {
+                    board: gameState.board,
+                    turn: gameState.turn,
+                    mode: gameState.mode,
+                    aiLevel: gameState.aiLevel,
+                    moveHistory: gameState.moveHistory || [],
+                    capturedPieces: gameState.capturedPieces || { w: [], b: [] },
+                    hintsRemaining: gameState.hintsRemaining !== undefined ? gameState.hintsRemaining : 1,
+                    hasMoved: gameState.hasMoved || {},
+                    isGameOver: false,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem('chess_saved_game', JSON.stringify(dataToSave));
+                checkAndShowResumeOption();
+            } catch (e) {
+                console.error("Save error:", e);
+            }
+        }
+
+        function loadSavedGameFromStorage() {
+            try {
+                const saved = localStorage.getItem('chess_saved_game');
+                if (!saved) return false;
+                
+                const parsed = JSON.parse(saved);
+                if (!parsed || !parsed.board || parsed.isGameOver) return false;
+
+                // Load and restore all saved match properties
+                gameState.board = parsed.board;
+                gameState.turn = parsed.turn || 'w';
+                gameState.mode = parsed.mode || 'pve';
+                gameState.aiLevel = parsed.aiLevel || 1;
+                gameState.moveHistory = parsed.moveHistory || [];
+                gameState.capturedPieces = parsed.capturedPieces || { w: [], b: [] };
+                gameState.hintsRemaining = parsed.hintsRemaining !== undefined ? parsed.hintsRemaining : 1;
+                gameState.hasMoved = parsed.hasMoved || {};
+                gameState.isGameOver = false;
+
+                // Re-render board pieces and refresh interface
+                buildPieces3D();
+                clearHighlights();
+                updateHUD();
+                updateHintButtonUI();
+
+                // Hide main menu modal if open
+                const menuModal = document.getElementById('menu-modal');
+                if (menuModal) menuModal.classList.add('hidden');
+
+                return true;
+            } catch (e) {
+                console.error("Load error:", e);
+                return false;
+            }
+        }
+
+        function handleManualSave() {
+            saveGameToStorage();
+            const btnText = document.getElementById('save-btn-text');
+            if (btnText) {
+                btnText.innerText = "Saved!";
+                setTimeout(() => { btnText.innerText = "Save Game"; }, 2000);
+            }
+        }
+        window.onload = function() {
+            let progress = 0;
+            const loadingBar = document.getElementById('loading-bar');
+            const loadingText = document.getElementById('loading-text');
+            const loadingScreen = document.getElementById('loading-screen');
+
+            const interval = setInterval(() => {
+                progress += 25;
+                if (loadingBar) loadingBar.style.width = progress + '%';
+                if (loadingText) loadingText.innerText = `Initializing 3D Geometry... ${progress}%`;
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    if (loadingScreen) {
+                        loadingScreen.style.opacity = '0';
+                        setTimeout(() => loadingScreen.remove(), 700);
+                    }
+                    init3D();
+                    sound.startPeacefulMusic();
+                    
+                    // Always perform auto-save check on load
+                    const hasSavedMatch = checkAndShowResumeOption();
+                    if (!hasSavedMatch) {
+                        resetInitialBoard();
+                        buildPieces3D();
+                    }
+                }
+            }, 120);
+
+            setupUIEvents();
+            startPlaytimeTimer();
+        };
+
+        function checkAndShowResumeOption() {
+            try {
+                const saved = localStorage.getItem('chess_saved_game');
+                const banner = document.getElementById('resume-game-banner');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed && parsed.board && !parsed.isGameOver) {
+                        if (banner) banner.classList.remove('hidden');
+                        return true;
+                    }
+                }
+                if (banner) banner.classList.add('hidden');
+                return false;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function getValidMovesForPiece(r, c) {
+            const piece = gameState.board[r][c];
+            if (!piece) return [];
+            const moves = [];
+            const isWhite = piece === piece.toUpperCase();
+
+            const directions = piece.toLowerCase() === 'r' ? [[1,0],[-1,0],[0,1],[0,-1]] :
+                               piece.toLowerCase() === 'b' ? [[1,1],[1,-1],[-1,1],[-1,-1]] :
+                               piece.toLowerCase() === 'q' || piece.toLowerCase() === 'k' ? [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]] : [];
+
+            if (piece.toLowerCase() === 'p') {
+                const dir = isWhite ? -1 : 1;
+                const nextR = r + dir;
+                
+                // 1 step forward
+                if (nextR >= 0 && nextR < 8 && !gameState.board[nextR][c]) {
+                    moves.push({ r: nextR, c: c });
+                    
+                    // 2 steps forward on initial move
+                    const startRow = isWhite ? 6 : 1;
+                    const twoStepR = r + dir * 2;
+                    if (r === startRow && twoStepR >= 0 && twoStepR < 8 && !gameState.board[twoStepR][c] && !gameState.board[nextR][c]) {
+                        moves.push({ r: twoStepR, c: c });
+                    }
+                }
+
+                // Diagonal captures
+                [-1, 1].forEach(dc => {
+                    const capR = r + dir;
+                    const capC = c + dc;
+                    if (capR >= 0 && capR < 8 && capC >= 0 && capC < 8) {
+                        const target = gameState.board[capR][capC];
+                        if (target && (target === target.toUpperCase()) !== isWhite) {
+                            moves.push({ r: capR, c: capC });
+                        }
+                    }
+                });
+            } else if (piece.toLowerCase() === 'n') {
+                const knightMoves = [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]];
+                knightMoves.forEach(m => {
+                    const tr = r + m[0];
+                    const tc = c + m[1];
+                    if (tr >= 0 && tr < 8 && tc >= 0 && tc < 8) {
+                        const target = gameState.board[tr][tc];
+                        if (!target || (target === target.toUpperCase()) !== isWhite) {
+                            moves.push({ r: tr, c: tc });
+                        }
+                    }
+                });
+            } else {
+                directions.forEach(d => {
+                    let tr = r + d[0];
+                    let tc = c + d[1];
+                    while (tr >= 0 && tr < 8 && tc >= 0 && tc < 8) {
+                        const target = gameState.board[tr][tc];
+                        if (!target) {
+                            moves.push({ r: tr, c: tc });
+                        } else {
+                            if ((target === target.toUpperCase()) !== isWhite) {
+                                moves.push({ r: tr, c: tc });
+                            }
+                            break;
+                        }
+                        if (piece.toLowerCase() === 'k') break;
+                        tr += d[0];
+                        tc += d[1];
+                    }
+                });
+            }
+            return moves;
+        }
+
+        function highlightValidMoves() {
+            clearHighlights();
+            gameState.validMoves.forEach(m => {
+                const hGeo = new THREE.RingGeometry(0.3, 0.4, 16);
+                hGeo.rotateX(-Math.PI / 2);
+                const hMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.85 });
+                const hMesh = new THREE.Mesh(hGeo, hMat);
+                hMesh.position.set(m.c - 3.5, 0.04, m.r - 3.5);
+                highlightGroup.add(hMesh);
+            });
+        }
+
+        function clearHighlights() {
+            while (highlightGroup.children.length > 0) {
+                highlightGroup.remove(highlightGroup.children[0]);
+            }
+        }
+
+        function makeMove(fromR, fromC, toR, toC) {
+            if (isAnimatingMove) return;
+
+            animateMoveWithHand(fromR, fromC, toR, toC, () => {
+                const piece = gameState.board[fromR][fromC];
+                const target = gameState.board[toR][toC];
+
+                const fileNames = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+                const moveNotation = `${piece.toUpperCase()}${fileNames[fromC]}${8 - fromR} → ${fileNames[toC]}${8 - toR}${target ? ' (Capture)' : ''}`;
+                gameState.moveHistory.push(moveNotation);
+
+                if (target) {
+                    const targetColor = target === target.toUpperCase() ? 'w' : 'b';
+                    gameState.capturedPieces[targetColor].push(target);
+                    sound.play('capture');
+                } else {
+                    sound.play('move');
+                }
+
+                gameState.board[toR][toC] = piece;
+                gameState.board[fromR][fromC] = null;
+
+                gameState.turn = gameState.turn === 'w' ? 'b' : 'w';
+                gameState.selectedSquare = null;
+                gameState.validMoves = [];
+                clearHighlights();
+
+                saveGameToStorage();
+                buildPieces3D();
+                updateHUD();
+
+                if (gameState.mode === 'pve' && gameState.turn === 'b' && !gameState.isGameOver) {
+                    setTimeout(triggerAIMove, 400);
+                }
+            });
+        }
+
+        function triggerAIMove() {
+            if (gameState.isGameOver) return;
+            let possibleMoves = [];
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const p = gameState.board[r][c];
+                    if (p && p === p.toLowerCase()) {
+                        const moves = getValidMovesForPiece(r, c);
+                        moves.forEach(m => possibleMoves.push({ fromR: r, fromC: c, toR: m.r, toC: m.c }));
+                    }
+                }
+            }
+
+            if (possibleMoves.length > 0) {
+                const chosen = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+                makeMove(chosen.fromR, chosen.fromC, chosen.toR, chosen.toC);
+            }
+        }
+
+        function provideHint() {
+            if (gameState.hintsRemaining <= 0) {
+                document.getElementById('hint-shop-modal').classList.remove('hidden');
+                return;
+            }
+            gameState.hintsRemaining--;
+            updateHintButtonUI();
+
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const p = gameState.board[r][c];
+                    if (p && ((p === p.toUpperCase()) === (gameState.turn === 'w'))) {
+                        const moves = getValidMovesForPiece(r, c);
+                        if (moves.length > 0) {
+                            gameState.selectedSquare = { r, c };
+                            gameState.validMoves = moves;
+                            highlightValidMoves();
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
+        function updateHintButtonUI() {
+            const btn = document.getElementById('hint-btn-text');
+            if (gameState.hintsRemaining > 0) {
+                btn.innerText = `Hint (${gameState.hintsRemaining} Left)`;
+            } else {
+                btn.innerText = `0 Hints Left (Get More)`;
+            }
+        }
+
+        function updateHUD() {
+            const coinEl = document.getElementById('coin-balance');
+            if (coinEl) coinEl.innerText = userState.coins;
+
+            const turnText = document.getElementById('turn-indicator-text');
+            const turnDot = document.getElementById('turn-indicator-dot');
+            if (turnText && turnDot) {
+                if (gameState.turn === 'w') {
+                    turnText.innerText = gameState.mode === 'pve' ? "Your Turn (White)" : "White's Turn";
+                    turnDot.className = "w-3.5 h-3.5 rounded-full bg-amber-400 animate-pulse";
+                } else {
+                    turnText.innerText = gameState.mode === 'pve' ? "AI Thinking..." : "Black's Turn";
+                    turnDot.className = "w-3.5 h-3.5 rounded-full bg-purple-400 animate-pulse";
+                }
+            }
+        }
+
+        function endGame(status, message) {
+            if (gameState.isGameOver) return;
+            gameState.isGameOver = true;
+            try {
+                localStorage.removeItem('chess_saved_game');
+            } catch (e) {}
+
+            let reward = 0;
+            if (status === 'win') reward = 100;
+            else if (status === 'draw') reward = 50;
+            else if (status === 'loss') reward = 10;
+            else reward = 0; // Resign awards 0 coins
+
+            if (status === 'win') userState.stats.wins++;
+            else userState.stats.losses++;
+
+            userState.stats.played++;
+            userState.stats.coinsEarned += reward;
+            userState.coins += reward;
+
+            try {
+                localStorage.setItem('chess_coins', userState.coins);
+                localStorage.setItem('chess_player_stats', JSON.stringify(userState.stats));
+            } catch (e) {}
+
+            const movesListEl = document.getElementById('review-moves-list');
+            movesListEl.innerHTML = '';
+            gameState.moveHistory.forEach((m, idx) => {
+                const div = document.createElement('div');
+                div.className = "flex justify-between py-1 border-b border-slate-800/60 text-xs";
+                div.innerHTML = `<span class="text-amber-400 font-bold">#${idx + 1}</span> <span>${m}</span>`;
+                movesListEl.appendChild(div);
+            });
+
+            document.getElementById('review-rating-title').innerText = status === 'win' ? "Grandmaster Expert (92%)" : "Tactical Competitor (74%)";
+            document.getElementById('review-rating-desc').innerText = message;
+            document.getElementById('game-review-modal').classList.remove('hidden');
+        }
+
+        function setupUIEvents() {
+            const bindClick = (id, fn) => {
+                const el = document.getElementById(id);
+                if (el) el.onclick = fn;
+            };
+
+            const handleManualLoad = () => {
+                const loaded = loadSavedGameFromStorage();
+                const loadText = document.getElementById('load-btn-text');
+                if (loadText) {
+                    loadText.innerText = loaded ? "Loaded!" : "No Save Found";
+                    setTimeout(() => { loadText.innerText = "Load Game"; }, 2000);
+                }
+            };
+
+            bindClick('btn-save-game', handleManualSave);
+            bindClick('btn-load-game', handleManualLoad);
+            bindClick('btn-resume-saved', () => {
+                if (loadSavedGameFromStorage()) {
+                    const menu = document.getElementById('menu-modal');
+                    if (menu) menu.classList.add('hidden');
+                }
+            });
+            bindClick('btn-settings-manual-save', handleManualSave);
+
+            bindClick('btn-settings-open', () => {
+                const modal = document.getElementById('settings-modal');
+                if (modal) modal.classList.remove('hidden');
+            });
+            bindClick('btn-settings-close', () => {
+                const modal = document.getElementById('settings-modal');
+                if (modal) modal.classList.add('hidden');
+            });
+            bindClick('btn-settings-save', () => {
+                const modal = document.getElementById('settings-modal');
+                if (modal) modal.classList.add('hidden');
+            });
+
+            document.querySelectorAll('.gfx-btn').forEach(btn => {
+                btn.onclick = () => {
+                    document.querySelectorAll('.gfx-btn').forEach(b => {
+                        b.className = "gfx-btn py-2.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold text-xs cursor-pointer";
+                    });
+                    btn.className = "gfx-btn py-2.5 rounded-xl border-2 border-amber-500 bg-amber-500/20 text-white font-bold text-xs cursor-pointer";
+                    const gfx = btn.getAttribute('data-gfx');
+                    userState.gfxQuality = gfx;
+                    if (renderer) {
+                        if (gfx === 'normal') {
+                            renderer.setPixelRatio(1);
+                            renderer.shadowMap.enabled = false;
+                        } else if (gfx === 'high') {
+                            renderer.setPixelRatio(1.5);
+                            renderer.shadowMap.enabled = true;
+                        } else {
+                            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                            renderer.shadowMap.enabled = true;
+                        }
+                    }
+                };
+            });
+
+            const sliderMaster = document.getElementById('slider-volume-master');
+            if (sliderMaster) {
+                sliderMaster.oninput = (e) => {
+                    const val = e.target.value;
+                    const valText = document.getElementById('volume-val-master');
+                    if (valText) valText.innerText = val + '%';
+                    sound.volumeMaster = val / 100;
+                    if (sound.musicGain && sound.ctx) {
+                        sound.musicGain.gain.setValueAtTime(0.45 * sound.volumeMaster, sound.ctx.currentTime);
+                    }
+                };
+            }
+
+            const sliderSFX = document.getElementById('slider-volume-sfx');
+            if (sliderSFX) {
+                sliderSFX.oninput = (e) => {
+                    const val = e.target.value;
+                    const valText = document.getElementById('volume-val-sfx');
+                    if (valText) valText.innerText = val + '%';
+                    sound.volumeSFX = val / 100;
+                };
+            }
+
+            bindClick('btn-menu-open', () => {
+                const modal = document.getElementById('menu-modal');
+                if (modal) modal.classList.remove('hidden');
+            });
+
+            bindClick('mode-pve', () => {
+                gameState.mode = 'pve';
+                const pveBtn = document.getElementById('mode-pve');
+                const pvpBtn = document.getElementById('mode-pvp');
+                const aiCont = document.getElementById('ai-level-container');
+                if (pveBtn) pveBtn.className = "py-3 px-4 rounded-xl border-2 border-amber-500 bg-amber-500/20 text-white font-bold text-sm transition flex items-center justify-center space-x-2 cursor-pointer";
+                if (pvpBtn) pvpBtn.className = "py-3 px-4 rounded-xl border-2 border-slate-700 bg-slate-800/60 text-slate-400 font-bold text-sm transition flex items-center justify-center space-x-2 cursor-pointer";
+                if (aiCont) aiCont.classList.remove('hidden');
+            });
+
+            bindClick('mode-pvp', () => {
+                gameState.mode = 'pvp';
+                const pveBtn = document.getElementById('mode-pve');
+                const pvpBtn = document.getElementById('mode-pvp');
+                const aiCont = document.getElementById('ai-level-container');
+                if (pvpBtn) pvpBtn.className = "py-3 px-4 rounded-xl border-2 border-amber-500 bg-amber-500/20 text-white font-bold text-sm transition flex items-center justify-center space-x-2 cursor-pointer";
+                if (pveBtn) pveBtn.className = "py-3 px-4 rounded-xl border-2 border-slate-700 bg-slate-800/60 text-slate-400 font-bold text-sm transition flex items-center justify-center space-x-2 cursor-pointer";
+                if (aiCont) aiCont.classList.add('hidden');
+            });
+
+            document.querySelectorAll('.lvl-btn').forEach(btn => {
+                btn.onclick = () => {
+                    const lvl = parseInt(btn.getAttribute('data-level'));
+                    if (lvl <= userState.unlockedLevel) {
+                        gameState.aiLevel = lvl;
+                        document.querySelectorAll('.lvl-btn').forEach(b => b.classList.remove('border-amber-500', 'bg-amber-500/20', 'text-white'));
+                        btn.classList.add('border-amber-500', 'bg-amber-500/20', 'text-white');
+                    }
+                };
+            });
+
+            bindClick('btn-start-game', () => {
+                const modal = document.getElementById('menu-modal');
+                if (modal) modal.classList.add('hidden');
+                resetInitialBoard();
+                buildPieces3D();
+            });
+
+            bindClick('btn-stats-open', () => {
+                const p = document.getElementById('stat-played');
+                const w = document.getElementById('stat-wins');
+                const wr = document.getElementById('stat-winrate');
+                const c = document.getElementById('stat-coins-earned');
+                if (p) p.innerText = userState.stats.played;
+                if (w) w.innerText = userState.stats.wins;
+                if (wr) wr.innerText = userState.stats.played > 0 ? Math.round((userState.stats.wins / userState.stats.played) * 100) + '%' : '0%';
+                if (c) c.innerText = userState.stats.coinsEarned;
+                const modal = document.getElementById('stats-modal');
+                if (modal) modal.classList.remove('hidden');
+            });
+            bindClick('btn-stats-close', () => {
+                const modal = document.getElementById('stats-modal');
+                if (modal) modal.classList.add('hidden');
+            });
+            bindClick('btn-stats-ok', () => {
+                const modal = document.getElementById('stats-modal');
+                if (modal) modal.classList.add('hidden');
+            });
+
+            bindClick('btn-shop-open', () => {
+                const modal = document.getElementById('shop-modal');
+                if (modal) modal.classList.remove('hidden');
+            });
+            bindClick('btn-shop-close', () => {
+                const modal = document.getElementById('shop-modal');
+                if (modal) modal.classList.add('hidden');
+            });
+
+            document.querySelectorAll('.theme-select-btn').forEach(btn => {
+                btn.onclick = () => {
+                    const theme = btn.getAttribute('data-theme');
+                    const cost = parseInt(btn.getAttribute('data-cost') || '0');
+
+                    if (userState.unlockedThemes.includes(theme)) {
+                        userState.currentTheme = theme;
+                        localStorage.setItem('chess_active_theme', theme);
+                        buildBoard3D();
+                        const modal = document.getElementById('shop-modal');
+                        if (modal) modal.classList.add('hidden');
+                    } else if (userState.coins >= cost) {
+                        userState.coins -= cost;
+                        userState.unlockedThemes.push(theme);
+                        userState.currentTheme = theme;
+                        localStorage.setItem('chess_coins', userState.coins);
+                        localStorage.setItem('chess_themes', JSON.stringify(userState.unlockedThemes));
+                        localStorage.setItem('chess_active_theme', theme);
+                        buildBoard3D();
+                        updateHUD();
+                        const modal = document.getElementById('shop-modal');
+                        if (modal) modal.classList.add('hidden');
+                    }
+                };
+            });
+
+            bindClick('btn-hint-trigger', provideHint);
+            bindClick('btn-hint-shop-close', () => {
+                const modal = document.getElementById('hint-shop-modal');
+                if (modal) modal.classList.add('hidden');
+            });
+            bindClick('btn-hint-shop-cancel', () => {
+                const modal = document.getElementById('hint-shop-modal');
+                if (modal) modal.classList.add('hidden');
+            });
+
+            bindClick('btn-buy-hint-1', () => {
+                if (userState.coins >= 100) {
+                    userState.coins -= 100;
+                    gameState.hintsRemaining += 1;
+                    localStorage.setItem('chess_coins', userState.coins);
+                    updateHUD();
+                    updateHintButtonUI();
+                    const modal = document.getElementById('hint-shop-modal');
+                    if (modal) modal.classList.add('hidden');
+                }
+            });
+            bindClick('btn-buy-hint-5', () => {
+                if (userState.coins >= 500) {
+                    userState.coins -= 500;
+                    gameState.hintsRemaining += 5;
+                    localStorage.setItem('chess_coins', userState.coins);
+                    updateHUD();
+                    updateHintButtonUI();
+                    const modal = document.getElementById('hint-shop-modal');
+                    if (modal) modal.classList.add('hidden');
+                }
+            });
+
+            bindClick('btn-resign', () => {
+                endGame('resign', 'You resigned the match. (0 Coins awarded for resignation)');
+            });
+
+            bindClick('btn-review-close', () => {
+                const rev = document.getElementById('game-review-modal');
+                const menu = document.getElementById('menu-modal');
+                if (rev) rev.classList.add('hidden');
+                if (menu) menu.classList.remove('hidden');
+            });
+            bindClick('btn-review-next', () => {
+                const rev = document.getElementById('game-review-modal');
+                const menu = document.getElementById('menu-modal');
+                if (rev) rev.classList.add('hidden');
+                if (menu) menu.classList.remove('hidden');
+            });
+        }
+    </script>
+</body>
+</html>
